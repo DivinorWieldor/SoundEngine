@@ -11,4 +11,4 @@ TODO:
 - Streamlined code
 - Raytraced audio
 - movement revamp to modify listener position
-	- makes it possible to take advantage of "speed" (doppler shift)
+	- integrate velocity (for doppler shift)
