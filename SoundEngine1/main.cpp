@@ -14,14 +14,20 @@ using namespace std;
 
 struct vec3 {
 	float x, y, z;
+
+	vec3() {} // default constructor, does not initialize vectors
+	vec3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {} // vector initializer
+	void set(float _x, float _y, float _z) { x = _x; y = _y; z = _z; }
 };
 
 struct Listener {
-	vec3 f, up;
+	vec3 f, up, pos, vel;
 
 	Listener() {
 		f.x = 0; f.y = 0; f.z = 1;
 		up.x = 0; up.y = 1; up.z = 0;
+		pos.x = 0; pos.y = 0; pos.z = 0;
+		vel.x = 0; vel.y = 0; vel.z = 0;
 	}
 };
 
@@ -118,6 +124,7 @@ void getAudioFormat(int channel, int bps, unsigned int& format);
 void keyInput(bool& running, float speed, float sensitivity, Listener& player, soundFile &sound);
 soundFile createSoundFile(std::string fileName);
 void setListenerAngle(float angle, Listener& player);
+void moveListener(vec3 position, Listener& player);
 #pragma endregion prototypes
 
 int main() {
@@ -149,7 +156,7 @@ int main() {
 
 	Uint64 start;
 	bool running = true;
-	float speed = 0.2;
+	float speed = 0.05;
 	float sensitivity = 0.005; //in degrees
 	Listener me;
 
@@ -287,6 +294,7 @@ soundFile createSoundFile(std::string fileName)
  */
 void keyInput(bool& running, float speed, float sensitivity, Listener &player, soundFile &sound) {
 	SDL_Event event;
+	vec3 position;
 
 	while (SDL_PollEvent(&event)) {
 		switch (event.type) {
@@ -296,18 +304,6 @@ void keyInput(bool& running, float speed, float sensitivity, Listener &player, s
 			//
 		case SDL_KEYDOWN:
 			switch (event.key.keysym.sym) {
-			case SDLK_UP:
-				sound.z += speed;
-				break;
-			case SDLK_RIGHT:
-				sound.x += speed;
-				break;
-			case SDLK_DOWN:
-				sound.z -= speed;
-				break;
-			case SDLK_LEFT:
-				sound.x -= speed;
-				break;
 			case SDLK_SPACE:
 				alSourcePlay(sound.sourceid);
 				//can also use Stop Pause Rewind instead of Play
@@ -326,7 +322,7 @@ void keyInput(bool& running, float speed, float sensitivity, Listener &player, s
 			* due to this, the degree is multiplied by -1 here
 			*/
 			setListenerAngle(event.motion.xrel * sensitivity * -1, player);
-			printf("forward vector: %f, %f, %f\n", player.f.x, player.f.y, player.f.z);
+			printf("forward vector: %f, %f, %f\n", (player.f.x - player.pos.x), (player.f.y - player.pos.y), (player.f.z - player.pos.z));
 			//cout << "mouse Motion output: " << event.motion.xrel << " " << event.motion.yrel << endl;
 			break;
 			/*case SDL_KEYUP:
@@ -347,12 +343,77 @@ void keyInput(bool& running, float speed, float sensitivity, Listener &player, s
 				break;*/
 		}
 	}
+
+	//simultaneous button press handler
+	//reference for scan codes https://wiki.libsdl.org/SDL2/SDL_Scancode
+	if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_LEFT] || SDL_GetKeyboardState(NULL)[SDL_SCANCODE_A]) {
+		position.set(player.pos.x - speed, player.pos.y, player.pos.z); // absolute movement (w.r.t. world space)
+		//position.set(player.pos.x - (player.f.x * speed), player.pos.y, player.pos.z); // relative movement (w.r.t. listener)
+		moveListener(position, player);
+	}
+	if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_RIGHT] || SDL_GetKeyboardState(NULL)[SDL_SCANCODE_D]) {
+		position.set(player.pos.x + speed, player.pos.y, player.pos.z);// absolute movement (w.r.t. world space)
+		//position.set(player.pos.x + (player.f.x * speed), player.pos.y, player.pos.z); // relative movement (w.r.t. listener)
+		moveListener(position, player);
+	}
+	if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_DOWN] || SDL_GetKeyboardState(NULL)[SDL_SCANCODE_S]){
+		position.set(player.pos.x, player.pos.y, player.pos.z - speed);// absolute movement (w.r.t. world space)
+		//position.set(player.pos.x, player.pos.y, player.pos.z - (player.f.z * speed)); // relative movement (w.r.t. listener)
+		moveListener(position, player);
+	}
+	if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_UP] || SDL_GetKeyboardState(NULL)[SDL_SCANCODE_W]) {
+		position.set(player.pos.x, player.pos.y, player.pos.z + speed);// absolute movement (w.r.t. world space)
+		//position.set(player.pos.x, player.pos.y, player.pos.z + (player.f.z * speed)); // relative movement (w.r.t. listener)
+		moveListener(position, player);
+	}
+	printf("\nposition of player: %f, %f, %f\nforward vector: %f, %f, %f\n", player.pos.x, player.pos.y, player.pos.z,
+																			(player.f.x - player.pos.x), (player.f.y - player.pos.y), (player.f.z - player.pos.z));
 }
 
 void setListenerAngle(float angle, Listener& player){
+	//move player to origin
+	vec3 position(0, 0, 0);
+	float xOffset = player.pos.x;
+	float yOffset = player.pos.y;
+	float zOffset = player.pos.z;
+	moveListener(position, player);
+
+	//turn player
 	float sinAngle = sin(angle);
 	float cosAngle = cos(angle);
+	float newX = (player.f.x * cosAngle) - (player.f.z * sinAngle);
+	float newZ = (player.f.x * sinAngle) + (player.f.z * cosAngle);
 
-	player.f.x = (player.f.x * cosAngle) - (player.f.z * sinAngle);
-	player.f.z = (player.f.x * sinAngle) + (player.f.z * cosAngle);
+	player.f.x = newX;
+	player.f.z = newZ;
+
+	//move player back to where it was
+	position.set(xOffset, yOffset, zOffset);
+	moveListener(position, player);
+}
+
+/**
+* Moves the listener to the given location
+* Updates lookAt vector of the listener
+*/
+void moveListener(vec3 position, Listener& player){
+
+	float xOffset = position.x - player.pos.x;
+	float yOffset = position.y - player.pos.y;
+	float zOffset = position.z - player.pos.z;
+
+	player.pos.x = position.x;
+	player.pos.y = position.y;
+	player.pos.z = position.z;
+	float playerPos[] = { player.pos.x, player.pos.y, player.pos.z };
+	alListenerfv(AL_POSITION, playerPos);
+
+	// Keep the listener facing the same direction by
+	// moving the "look at" point by the offset values:
+	player.f.x += xOffset;
+	player.f.y += yOffset;
+	player.f.z += zOffset;
+	float playerLookAt[] = { player.f.x,  player.f.y,  player.f.z,//forward
+							 player.up.x, player.up.y, player.up.z }; // up
+	alListenerfv(AL_ORIENTATION, playerLookAt);
 }
