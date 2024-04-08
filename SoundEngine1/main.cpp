@@ -157,8 +157,13 @@ int main() {
 	Uint64 start;
 	bool running = true;
 	float speed = 0.05;
-	float sensitivity = 0.005; //in degrees
+	float sensitivity = 0.005; //in degrees?
 	Listener me;
+
+	//set global volume
+	float volume = 1;
+	alListenerf(AL_GAIN, volume); //appears to only accept values between (0,1)
+	//alSourcef(currentSourceID, AL_GAIN, newVolume); //to set volume of a source
 
 	while (running) {
 		start = SDL_GetTicks64();
