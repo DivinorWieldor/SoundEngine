@@ -6,5 +6,9 @@ useful resources for learning:
 
 TODO:
 - Mouse control
+	- w.r.t. xz-plane
+	- movement affected
 - Streamlined code
 - Raytraced audio
+- movement revamp to modify listener position
+	- makes it possible to take advantage of "speed" (doppler shift)
