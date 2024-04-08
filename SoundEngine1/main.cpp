@@ -2,6 +2,7 @@
 #include <fstream>
 #include <cstring>
 #include <string>
+#include <math.h>
 
 #include <AL/al.h>
 #include <AL/alc.h>
@@ -11,14 +12,30 @@
 
 using namespace std;
 
+struct vec3 {
+	float x, y, z;
+};
+
+struct Listener {
+	vec3 f, up;
+
+	Listener() {
+		f.x = 0; f.y = 0; f.z = 1;
+		up.x = 0; up.y = 1; up.z = 0;
+	}
+};
+
 struct soundFile {
 	string name;
 	int channel, sampleRate, bps, size;
 	char* wavFile;
+	float x = 0, y = 0, z = 0; // sound position
+	unsigned int sourceid, bufferid; // post-initialization
 
 	soundFile(string _name) : name(_name) {}
 };
 
+#pragma region WAV_loaders
 bool isBigEndian() {
 	int a = 1;
 
@@ -82,11 +99,12 @@ char* loadWAV(string filename, int& channel, int& sampleRate, int& bps, int& siz
 	char* data = new char[size];//sound data
 	in.read(data, size);
 
-	printf("%s successfully loaded\nchannel: %i; sample rate: %i; bits per second: %i, audio size: %i", filename.c_str(), channel, sampleRate, bps, size);
+	printf("%s successfully loaded\nchannel: %i; sample rate: %i; bits per second: %i, audio size: %i\n", filename.c_str(), channel, sampleRate, bps, size);
 	return data;
 }
+#pragma endregion WAV_loaders
 
-
+#pragma region prototypes
 //prototypes
 //device set up
 void deviceExists(ALCdevice* device);
@@ -97,8 +115,10 @@ void freeContext(ALCdevice* device, ALCcontext* context);
 
 //utilities
 void getAudioFormat(int channel, int bps, unsigned int& format);
-void keyInput(bool& running, float speed, float& x, float& y, float& z, unsigned int& sourceid);
+void keyInput(bool& running, float speed, float sensitivity, Listener& player, soundFile &sound);
 soundFile createSoundFile(std::string fileName);
+void setListenerAngle(float angle, Listener& player);
+#pragma endregion prototypes
 
 int main() {
 	soundFile chirping = createSoundFile("chirp.wav");
@@ -109,16 +129,15 @@ int main() {
 	ALSetup(device, context);
 
 	//create sound buffer
-	unsigned int bufferid, format;
-	alGenBuffers(1, &bufferid);
+	unsigned int format;
+	alGenBuffers(1, &(chirping.bufferid));
 
 	getAudioFormat(chirping.channel, chirping.bps, format);
-	alBufferData(bufferid, format, chirping.wavFile, chirping.size, chirping.sampleRate);
+	alBufferData(chirping.bufferid, format, chirping.wavFile, chirping.size, chirping.sampleRate);
 
 	//create a sound source
-	unsigned int sourceid;
-	alGenSources(1, &sourceid); //create 1 source into sourceid
-	alSourcei(sourceid, AL_BUFFER, bufferid); // attach ONE(i) buffer to source
+	alGenSources(1, &(chirping.sourceid)); //create 1 source into sourceid
+	alSourcei(chirping.sourceid, AL_BUFFER, chirping.bufferid); // attach ONE(i) buffer to source
 
 	//play sound
 	//SDL_SetVideoMode has been depricated: https://stackoverflow.com/q/28400401/16858784
@@ -126,36 +145,38 @@ int main() {
 	SDL_Window* window;
 	SDL_Surface* screenSurface;
 	SDLSetup(window, screenSurface, 480, 640);
+	SDL_SetRelativeMouseMode(SDL_TRUE);
 
 	Uint64 start;
 	bool running = true;
-	float x = 0, y = 0, z = 0; // sound position
 	float speed = 0.2;
+	float sensitivity = 0.005; //in degrees
+	Listener me;
 
 	while (running) {
 		start = SDL_GetTicks64();
 
 		//process key inputs
-		keyInput(running, speed, x, y, z, sourceid);
+		keyInput(running, speed, sensitivity, me, chirping);
 
 		//position of sound source
-		alSource3f(sourceid, AL_POSITION, x, y, z);
-		alSourcei(sourceid, AL_LOOPING, AL_TRUE); // makes the sound continuously loop once initiated
+		alSource3f(chirping.sourceid, AL_POSITION, chirping.x, chirping.y, chirping.z);
+		alSourcei(chirping.sourceid, AL_LOOPING, AL_TRUE); // makes the sound continuously loop once initiated
 		
 		//position of listener
-		//          forward, up
-		float f[] = {0,0,1, 0,1,0};
-		alListenerfv(AL_ORIENTATION, f);
+		float playerVec[] = { me.f.x, me.f.y, me.f.z,//forward
+							me.up.x, me.up.y, me.up.z };//up
+		alListenerfv(AL_ORIENTATION, playerVec);
 		
-		//necessary for sound when moving
+		//necessary for sound playing when moving
 		if (1000 / 30 > SDL_GetTicks64() - start) {
 			SDL_Delay(1000 / 30 - (SDL_GetTicks64() - start));
 		}
 	}
 
 	//program termination
-	alDeleteSources(1, &sourceid);
-	alDeleteBuffers(1, &bufferid);
+	alDeleteSources(1, &(chirping.sourceid));
+	alDeleteBuffers(1, &(chirping.bufferid));
 
 	delete[] chirping.wavFile;
 	freeContext(device, context);
@@ -264,7 +285,7 @@ soundFile createSoundFile(std::string fileName)
 /**
  * moves sound sources on the x-z plane according to the keyboard input
  */
-void keyInput(bool& running, float speed, float& x, float& y, float& z, unsigned int& sourceid) {
+void keyInput(bool& running, float speed, float sensitivity, Listener &player, soundFile &sound) {
 	SDL_Event event;
 
 	while (SDL_PollEvent(&event)) {
@@ -276,25 +297,37 @@ void keyInput(bool& running, float speed, float& x, float& y, float& z, unsigned
 		case SDL_KEYDOWN:
 			switch (event.key.keysym.sym) {
 			case SDLK_UP:
-				z += speed;
+				sound.z += speed;
 				break;
 			case SDLK_RIGHT:
-				x += speed;
+				sound.x += speed;
 				break;
 			case SDLK_DOWN:
-				z -= speed;
+				sound.z -= speed;
 				break;
 			case SDLK_LEFT:
-				x -= speed;
+				sound.x -= speed;
 				break;
 			case SDLK_SPACE:
-				alSourcePlay(sourceid);
+				alSourcePlay(sound.sourceid);
 				//can also use Stop Pause Rewind instead of Play
 				break;
 			case SDLK_ESCAPE:
 				running = false;
 				break;
+			case SDLK_c:
+				SDL_SetRelativeMouseMode(SDL_FALSE);
+				break;
 			}
+			break;
+		case SDL_MOUSEMOTION:
+			/**
+			* left is negative, so it will turn right without modifications
+			* due to this, the degree is multiplied by -1 here
+			*/
+			setListenerAngle(event.motion.xrel * sensitivity * -1, player);
+			printf("forward vector: %f, %f, %f\n", player.f.x, player.f.y, player.f.z);
+			//cout << "mouse Motion output: " << event.motion.xrel << " " << event.motion.yrel << endl;
 			break;
 			/*case SDL_KEYUP:
 				switch (event.key.keysym.sym) {
@@ -314,4 +347,12 @@ void keyInput(bool& running, float speed, float& x, float& y, float& z, unsigned
 				break;*/
 		}
 	}
+}
+
+void setListenerAngle(float angle, Listener& player){
+	float sinAngle = sin(angle);
+	float cosAngle = cos(angle);
+
+	player.f.x = (player.f.x * cosAngle) - (player.f.z * sinAngle);
+	player.f.z = (player.f.x * sinAngle) + (player.f.z * cosAngle);
 }
