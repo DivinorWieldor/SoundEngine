@@ -16,10 +16,9 @@ struct soundFile {
 	int channel, sampleRate, bps, size;
 	char* wavFile;
 
-	soundFile(string _name) : name(_name){}
+	soundFile(string _name) : name(_name) {}
 };
 
-//wav file handling
 bool isBigEndian() {
 	int a = 1;
 
@@ -31,27 +30,30 @@ bool isBigEndian() {
 int charToInt(char* buffer, int len) {
 	int a = 0;
 
-	if(!isBigEndian()){
+	if (!isBigEndian()) {
 		for (int i = 0; i < len; i++) {
 			((char*)&a)[i] = buffer[i];
 		}
 	}
 	else {
 		for (int i = 0; i < len; i++) {
-			((char*)&a)[3-i] = buffer[i];
+			((char*)&a)[3 - i] = buffer[i];
 		}
 	}
 
 	return a;
 }
 
+/**
+ * detects the properties of a WAV file and loads from file name
+ */
 char* loadWAV(string filename, int& channel, int& sampleRate, int& bps, int& size) {
 	ifstream in(filename, ios::binary);
 	char buffer[4];
 
 	in.read(buffer, 4);
 	if (strncmp(buffer, "RIFF", 4) != 0) {
-		cout << "WAV file does not use RIFF!\n\tExpected 'RIFF', got " << buffer[0] << buffer[1] << buffer[2] << buffer[3] << endl;
+		std::cout << "WAV file does not use RIFF!\n\tExpected 'RIFF', got " << buffer[0] << buffer[1] << buffer[2] << buffer[3] << std::endl;
 	}
 
 	in.read(buffer, 4);
@@ -59,7 +61,7 @@ char* loadWAV(string filename, int& channel, int& sampleRate, int& bps, int& siz
 	in.read(buffer, 4);//should read "fmt"
 	in.read(buffer, 4);//should read "16"
 	in.read(buffer, 2);//should read "1"
-	
+
 	in.read(buffer, 2);//channel info
 	channel = charToInt(buffer, 2);
 
@@ -80,23 +82,26 @@ char* loadWAV(string filename, int& channel, int& sampleRate, int& bps, int& siz
 	char* data = new char[size];//sound data
 	in.read(data, size);
 
-	cout << filename << " successfully loaded" << endl;
-	//cout << channel << " " << sampleRate << " " << bps << " " << size << endl;
+	printf("%s successfully loaded\nchannel: %i; sample rate: %i; bits per second: %i, audio size: %i", filename.c_str(), channel, sampleRate, bps, size);
 	return data;
 }
 
+
 //prototypes
+//device set up
 void deviceExists(ALCdevice* device);
 void contextExists(ALCcontext* context);
-void ALSetup(ALCdevice* &device, ALCcontext* &context);
+void ALSetup(ALCdevice*& device, ALCcontext*& context);
 void SDLSetup(SDL_Window*& window, SDL_Surface*& screenSurface, int height, int width);
 void freeContext(ALCdevice* device, ALCcontext* context);
+
+//utilities
 void getAudioFormat(int channel, int bps, unsigned int& format);
+void keyInput(bool& running, float speed, float& x, float& y, float& z, unsigned int& sourceid);
+soundFile createSoundFile(std::string fileName);
 
 int main() {
-	soundFile chirping("chirp.wav");
-
-	chirping.wavFile = loadWAV(chirping.name, chirping.channel, chirping.sampleRate, chirping.bps, chirping.size);
+	soundFile chirping = createSoundFile("chirp.wav");
 
 	//set up openAL context
 	ALCdevice* device;
@@ -122,82 +127,31 @@ int main() {
 	SDL_Surface* screenSurface;
 	SDLSetup(window, screenSurface, 480, 640);
 
-	SDL_Event event;
 	Uint64 start;
 	bool running = true;
-	bool b[4] = { 0,0,0,0 };
-	float x = 0, z = 0, speed = 0.2; // sound position
+	float x = 0, y = 0, z = 0; // sound position
+	float speed = 0.2;
 
 	while (running) {
 		start = SDL_GetTicks64();
-		while (SDL_PollEvent(&event)) {
-			switch (event.type) {
-			case SDL_QUIT:
-				running = false;
-				break;
-			//
-			case SDL_KEYDOWN:
-				switch (event.key.keysym.sym) {
-				case SDLK_UP:
-					b[0] = true;
-					break;
-				case SDLK_RIGHT:
-					b[1] = true;
-					break;
-				case SDLK_DOWN:
-					b[2] = true;
-					break;
-				case SDLK_LEFT:
-					b[3] = true;
-					break;
-				case SDLK_SPACE:
-					alSourcePlay(sourceid);
-					//can also use Stop Pause Rewind instead of Play
-					break;
-				case SDLK_ESCAPE:
-					running = false;
-					break;
-				}
-				break;
-			//
-			case SDL_KEYUP:
-				switch (event.key.keysym.sym) {
-				case SDLK_UP:
-					b[0] = false;
-					break;
-				case SDLK_RIGHT:
-					b[1] = false;
-					break;
-				case SDLK_DOWN:
-					b[2] = false;
-					break;
-				case SDLK_LEFT:
-					b[3] = false;
-					break;
-				}
-				break;
-			}
-		}
 
-		if (b[0]) z += speed;
-		if (b[1]) x += speed;
-		if (b[2]) z -= speed;
-		if (b[3]) x -= speed;
+		//process key inputs
+		keyInput(running, speed, x, y, z, sourceid);
 
-		alSource3f(sourceid, AL_POSITION, x, 0, z);
-		//alSourcei(sourceid, AL_LOOPING, AL_TRUE); // makes the sound continuously loop once initiated
+		//position of sound source
+		alSource3f(sourceid, AL_POSITION, x, y, z);
+		alSourcei(sourceid, AL_LOOPING, AL_TRUE); // makes the sound continuously loop once initiated
 		
 		//position of listener
 		//          forward, up
-		float f[] = {1,0,0, 0,1,0};
+		float f[] = {0,0,1, 0,1,0};
 		alListenerfv(AL_ORIENTATION, f);
 		
+		//necessary for sound when moving
 		if (1000 / 30 > SDL_GetTicks64() - start) {
 			SDL_Delay(1000 / 30 - (SDL_GetTicks64() - start));
 		}
 	}
-
-
 
 	//program termination
 	alDeleteSources(1, &sourceid);
@@ -208,37 +162,45 @@ int main() {
 	return 0;
 }
 
-// prototype implementations
+//**************************************************************
+//************** prototype implementations *********************
+//**************************************************************
 
 //setup and ending
 void deviceExists(ALCdevice* device) {
 	if (device == NULL) {
-		cout << "sound card cannot be opened" << endl;
+		cout << "sound card cannot be opened" << std::endl;
 		exit(100);
 	}
 }
+
+/**
+ * checks if the context item was intialized correctly
+ * terminates program if not
+ */
 void contextExists(ALCcontext* context) {
 	if (context == NULL) {
-		cout << "context cannot be created" << endl;
+		cout << "context cannot be created" << std::endl;
 		exit(101);
 	}
-}
-void freeContext(ALCdevice* device, ALCcontext* context) {
-	alcDestroyContext(context);
-	alcCloseDevice(device);
 }
 
 /**
  * default device is set to context
  * context is made current
  */
-void ALSetup(ALCdevice* &device, ALCcontext* &context) {
+void ALSetup(ALCdevice*& device, ALCcontext*& context) {
 	device = alcOpenDevice(NULL);
 	deviceExists(device);
 
 	context = alcCreateContext(device, NULL);
 	contextExists(context);
 	alcMakeContextCurrent(context);
+}
+
+void freeContext(ALCdevice* device, ALCcontext* context) {
+	alcDestroyContext(context);
+	alcCloseDevice(device);
 }
 
 void SDLSetup(SDL_Window* &window, SDL_Surface* &screenSurface, int height, int width) {
@@ -268,7 +230,7 @@ void SDLSetup(SDL_Window* &window, SDL_Surface* &screenSurface, int height, int 
 }
 
 /**
- * sets audio format
+ * detects and sets audio format
  * decides between MONO vs STEREO channel and 8 vs 16 bps
  */
 void getAudioFormat(int channel, int bps, unsigned int& format) {
@@ -286,6 +248,70 @@ void getAudioFormat(int channel, int bps, unsigned int& format) {
 		}
 		else {//bps 16
 			format = AL_FORMAT_STEREO16;
+		}
+	}
+}
+
+soundFile createSoundFile(std::string fileName)
+{
+	soundFile newFile(fileName);
+
+	newFile.wavFile = loadWAV(newFile.name, newFile.channel, newFile.sampleRate, newFile.bps, newFile.size);
+
+	return newFile;
+}
+
+/**
+ * moves sound sources on the x-z plane according to the keyboard input
+ */
+void keyInput(bool& running, float speed, float& x, float& y, float& z, unsigned int& sourceid) {
+	SDL_Event event;
+
+	while (SDL_PollEvent(&event)) {
+		switch (event.type) {
+		case SDL_QUIT:
+			running = false;
+			break;
+			//
+		case SDL_KEYDOWN:
+			switch (event.key.keysym.sym) {
+			case SDLK_UP:
+				z += speed;
+				break;
+			case SDLK_RIGHT:
+				x += speed;
+				break;
+			case SDLK_DOWN:
+				z -= speed;
+				break;
+			case SDLK_LEFT:
+				x -= speed;
+				break;
+			case SDLK_SPACE:
+				alSourcePlay(sourceid);
+				//can also use Stop Pause Rewind instead of Play
+				break;
+			case SDLK_ESCAPE:
+				running = false;
+				break;
+			}
+			break;
+			/*case SDL_KEYUP:
+				switch (event.key.keysym.sym) {
+				case SDLK_UP:
+					movingDirection[0] = false;
+					break;
+				case SDLK_RIGHT:
+					movingDirection[1] = false;
+					break;
+				case SDLK_DOWN:
+					movingDirection[2] = false;
+					break;
+				case SDLK_LEFT:
+					movingDirection[3] = false;
+					break;
+				}
+				break;*/
 		}
 	}
 }

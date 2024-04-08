@@ -2,4 +2,9 @@
  Basic attempt at creating a custom sound engine utilizing OpenAL-Soft
 
 useful resources for learning:
-- https://www.youtube.com/watch?v=tmVRpNFP9ys
+- [basic OpenAL tutorial](youtube.com/watch?v=tmVRpNFP9ys)
+
+TODO:
+- Mouse control
+- Streamlined code
+- Raytraced audio
