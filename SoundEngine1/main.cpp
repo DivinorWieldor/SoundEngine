@@ -331,7 +331,7 @@ void keyInput(bool& running, float speed, float sensitivity, Listener &player, s
 			* left is negative, so it will turn right without modifications
 			* due to this, the degree is multiplied by -1 here
 			*/
-			setListenerAngle(event.motion.xrel * sensitivity * -1, player);
+			setListenerAngle(event.motion.xrel * sensitivity, player);
 			printf("forward vector: %f, %f, %f\n", (player.f.x - player.pos.x), (player.f.y - player.pos.y), (player.f.z - player.pos.z));
 			//cout << "mouse Motion output: " << event.motion.xrel << " " << event.motion.yrel << endl;
 			break;
