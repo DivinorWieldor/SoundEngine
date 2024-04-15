@@ -121,6 +121,7 @@ void freeContext(ALCdevice* device, ALCcontext* context);
 
 //utilities
 void getAudioFormat(int channel, int bps, unsigned int& format);
+void initAudioSource(soundFile &sFile);
 void keyInput(bool& running, float speed, float sensitivity, Listener& player, soundFile &sound);
 soundFile createSoundFile(std::string fileName);
 void setListenerAngle(float angle, Listener& player);
@@ -128,25 +129,16 @@ void moveListener(vec3 position, Listener& player);
 #pragma endregion prototypes
 
 int main() {
-	soundFile chirping = createSoundFile("chirp.wav");
-
 	//set up openAL context
 	ALCdevice* device;
 	ALCcontext* context;
 	ALSetup(device, context);
 
-	//create sound buffer
-	unsigned int format;
-	alGenBuffers(1, &(chirping.bufferid));
+	//set up audio source
+	soundFile chirping = createSoundFile("./sounds/sine.wav");
+	initAudioSource(chirping);
 
-	getAudioFormat(chirping.channel, chirping.bps, format);
-	alBufferData(chirping.bufferid, format, chirping.wavFile, chirping.size, chirping.sampleRate);
-
-	//create a sound source
-	alGenSources(1, &(chirping.sourceid)); //create 1 source into sourceid
-	alSourcei(chirping.sourceid, AL_BUFFER, chirping.bufferid); // attach ONE(i) buffer to source
-
-	//play sound
+	//set up applications
 	//SDL_SetVideoMode has been depricated: https://stackoverflow.com/q/28400401/16858784
 	SDL_Init(SDL_INIT_EVERYTHING);
 	SDL_Window* window;
@@ -156,7 +148,7 @@ int main() {
 
 	Uint64 start;
 	bool running = true;
-	float speed = 0.05;
+	float speed = 0.1;
 	float sensitivity = 0.005; //in degrees?
 	Listener me;
 
@@ -283,6 +275,19 @@ void getAudioFormat(int channel, int bps, unsigned int& format) {
 			format = AL_FORMAT_STEREO16;
 		}
 	}
+}
+
+void initAudioSource(soundFile& sFile){
+	//create sound buffer
+	unsigned int format;
+	alGenBuffers(1, &(sFile.bufferid));
+
+	getAudioFormat(sFile.channel, sFile.bps, format);
+	alBufferData(sFile.bufferid, format, sFile.wavFile, sFile.size, sFile.sampleRate);
+
+	//create a sound source
+	alGenSources(1, &(sFile.sourceid)); //create 1 source into sourceid
+	alSourcei(sFile.sourceid, AL_BUFFER, sFile.bufferid); // attach ONE(i) buffer to source
 }
 
 soundFile createSoundFile(std::string fileName)
