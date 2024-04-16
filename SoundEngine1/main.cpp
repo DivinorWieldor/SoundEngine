@@ -19,12 +19,10 @@ int main() {
 	ALCcontext* context;
 	ALSetup(device, context);
 
-	//set up audio source
-	soundFile chirping = createSoundFile("./sounds/chirp.wav");
-	initAudioSource(chirping);
-	//TODO: load other files
-	//test stopping all sounds (even if one is not playing?)
-	//assign them to a key
+	//set up audio sources
+	//each sound is assigned to keys [1-9]. Press ["] to make them all stop
+	std::vector<std::string> soundFiles({ "./sounds/chirp.wav", "./sounds/sine.wav", "./sounds/sine_beeping.wav", "./sounds/whitenoise.wav" });
+	std::vector<soundFile*> sounds = createSounds(soundFiles);
 
 	//set up applications
 	//SDL_SetVideoMode has been depricated: https://stackoverflow.com/q/28400401/16858784
@@ -50,11 +48,13 @@ int main() {
 		start = SDL_GetTicks64();
 
 		//process key inputs
-		keyInput(running, speed, sensitivity, me, chirping);
+		keyInput(running, speed, sensitivity, me, sounds);
 
 		//position of sound source
-		alSource3f(chirping.sourceid, AL_POSITION, chirping.x, chirping.y, chirping.z);
-		alSourcei(chirping.sourceid, AL_LOOPING, AL_TRUE); // makes the sound continuously loop once initiated
+		for (int i = 0; i < sounds.size(); i++) {
+			alSource3f(sounds[i]->sourceid, AL_POSITION, sounds[i]->x, sounds[i]->y, sounds[i]->z);
+			alSourcei(sounds[i]->sourceid, AL_LOOPING, AL_TRUE); // makes the sound continuously loop once initiated
+		}
 		
 		//position of listener
 		float playerVec[] = { me.f.x, me.f.y, me.f.z,//forward
@@ -68,7 +68,7 @@ int main() {
 	}
 
 	//program termination
-	deleteSoundFile(chirping);
+	deleteSoundFiles(sounds);
 	freeContext(device, context);
 	return 0;
 }

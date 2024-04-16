@@ -6,6 +6,7 @@
 #include <cstring>
 #include <string>
 #include <math.h>
+#include <vector>
 
 #include <AL/al.h>
 #include <AL/alc.h>
@@ -57,12 +58,14 @@ void ALSetup(ALCdevice*& device, ALCcontext*& context);
 void SDLSetup(SDL_Window*& window, SDL_Surface*& screenSurface, int height, int width);
 void freeContext(ALCdevice* device, ALCcontext* context);
 void deleteSoundFile(soundFile &sf);
+void deleteSoundFiles(std::vector<soundFile*> &soundFiles);
 
 //utilities
 void getAudioFormat(int channel, int bps, unsigned int& format);
 void initAudioSource(soundFile& sFile);
-void keyInput(bool& running, float speed, float sensitivity, Listener& player, soundFile& sound);
+void keyInput(bool& running, float speed, float sensitivity, Listener& player, std::vector<soundFile*>& sounds);
 soundFile createSoundFile(std::string fileName);
+std::vector<soundFile*> createSounds(std::vector<std::string>& files);
 void setListenerAngle(float angle, Listener& player);
 void moveListener(vec3 position, Listener& player);
 #pragma endregion prototypes

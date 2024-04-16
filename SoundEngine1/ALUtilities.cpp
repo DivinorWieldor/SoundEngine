@@ -103,11 +103,13 @@ void ALSetup(ALCdevice*& device, ALCcontext*& context) {
 	alcMakeContextCurrent(context);
 }
 
+//destroys allocated OpenAL instances
 void freeContext(ALCdevice* device, ALCcontext* context) {
 	alcDestroyContext(context);
 	alcCloseDevice(device);
 }
 
+//deletes the loaded elements of the given sound file, as well as its buffers
 void deleteSoundFile(soundFile &sf){
 	alDeleteSources(1, &(sf.sourceid));
 	alDeleteBuffers(1, &(sf.bufferid));
@@ -115,6 +117,16 @@ void deleteSoundFile(soundFile &sf){
 	delete[] sf.wavFile;
 }
 
+//deletes all sound file instances
+void deleteSoundFiles(std::vector<soundFile*> &soundFiles){
+	for (int i = 0; i < soundFiles.size(); i++) {
+		deleteSoundFile(*soundFiles[i]);
+		delete soundFiles[i];
+	}
+	soundFiles.clear();
+}
+
+//creates an SDL instance and sets up an interactable window element
 void SDLSetup(SDL_Window*& window, SDL_Surface*& screenSurface, int height, int width) {
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
 		fprintf(stderr, "SDL init failed: %s\n", SDL_GetError());
@@ -186,10 +198,25 @@ soundFile createSoundFile(std::string fileName)
 	return newFile;
 }
 
+std::vector<soundFile*> createSounds(std::vector<std::string>& files)
+{
+	std::vector<soundFile*> allSoundFiles;
+
+	for (int i = 0; i < files.size(); i++) {
+		soundFile* newSound = new soundFile(files[i]);
+		*newSound = createSoundFile(files[i]);
+		initAudioSource(*newSound);
+
+		allSoundFiles.push_back(newSound);
+	}
+
+	return allSoundFiles;
+}
+
 /**
  * moves sound sources on the x-z plane according to the keyboard input
  */
-void keyInput(bool& running, float speed, float sensitivity, Listener& player, soundFile& sound) {
+void keyInput(bool& running, float speed, float sensitivity, Listener& player, std::vector<soundFile*> &sounds) {
 	SDL_Event event;
 	vec3 position;
 
@@ -201,10 +228,24 @@ void keyInput(bool& running, float speed, float sensitivity, Listener& player, s
 			//
 		case SDL_KEYDOWN:
 			switch (event.key.keysym.sym) {
-			case SDLK_SPACE:
-				alSourcePlay(sound.sourceid);
+			case SDLK_QUOTEDBL:
+				for (int i = 0; i < sounds.size(); i++)
+					alSourceStop(sounds[i]->sourceid);
+				break;
+			case SDLK_1:
+				alSourcePlay(sounds[0]->sourceid);
 				//can also use Stop Pause Rewind instead of Play
 				break;
+			case SDLK_2:
+				alSourcePlay(sounds[1]->sourceid);
+				break;
+			case SDLK_3:
+				alSourcePlay(sounds[2]->sourceid);
+				break;
+			case SDLK_4:
+				alSourcePlay(sounds[3]->sourceid);
+				break;
+			//////////////////////////////////////
 			case SDLK_ESCAPE:
 				running = false;
 				break;
