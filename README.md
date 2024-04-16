@@ -10,7 +10,6 @@ TODO:
 - Mouse control
 	- w.r.t. xz-plane
 	- movement affected
-- Streamlined code
 - Raytraced audio
 - movement revamp to modify listener position
 	- integrate velocity (for doppler shift)
