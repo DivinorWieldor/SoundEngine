@@ -1,8 +1,6 @@
-#include <iostream>
-#include <fstream>
 #include <cstring>
 #include <string>
-#include <math.h>
+#include <vector>
 
 #include <AL/al.h>
 #include <AL/alc.h>
