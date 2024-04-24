@@ -228,10 +228,12 @@ void keyInput(bool& running, float speed, float sensitivity, Listener& player, s
 			//
 		case SDL_KEYDOWN:
 			switch (event.key.keysym.sym) {
+			//stop all sounds
 			case SDLK_QUOTEDBL:
 				for (int i = 0; i < sounds.size(); i++)
 					alSourceStop(sounds[i]->sourceid);
 				break;
+			//play a sound associated with this keybind
 			case SDLK_1:
 				alSourcePlay(sounds[0]->sourceid);
 				//can also use Stop Pause Rewind instead of Play
@@ -246,6 +248,7 @@ void keyInput(bool& running, float speed, float sensitivity, Listener& player, s
 				alSourcePlay(sounds[3]->sourceid);
 				break;
 			//////////////////////////////////////
+			//misc. keybinds
 			case SDLK_ESCAPE:
 				running = false;
 				break;
