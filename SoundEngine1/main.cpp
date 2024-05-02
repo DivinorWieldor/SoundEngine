@@ -26,6 +26,12 @@ struct sineW { //https://stackoverflow.com/questions/5469030/c-play-back-a-tone-
 
 	short* samples;					//array: new short[buf_size]
 
+	int getState() {
+		int State;
+		alGetSourcei(sourceid, AL_SOURCE_STATE, &State);
+		return State;
+	}
+
 	sineW(float _freq = 440, int _seconds = 1, unsigned int _sample_rate = 22050)
 		: freq(_freq), seconds(_seconds), sample_rate(_sample_rate)
 	{
@@ -39,8 +45,9 @@ struct sineW { //https://stackoverflow.com/questions/5469030/c-play-back-a-tone-
 			//samples[i] = 32768 * 2 * (i * freq - int((i * freq) + 0.5)) / sample_rate;//sawtooth - does not work
 			//samples[i] = 32768 * (2/M_PI) * asin(sin((2 * M_PI * freq * i) / sample_rate));//triangle
 			//samples[i] = 32768 * sgn(cos((2 * M_PI * freq * i) / sample_rate));			//square
-			//samples[i] = 32768 * cos( (2*M_PI * freq * i)/sample_rate);					//sin or cos
+			samples[i] = 32768 * cos( (2*M_PI * freq * i)/sample_rate);						//sin or cos
 		// 32760 because we use mono16, and 16 bits is 32768 (ignoring last digit cuz lazy)
+		samples[0] = samples[buf_size-1]; //i=0 causes issues, set it to one previous
 
 		/* Download buffer to OpenAL */
 		alBufferData(bufferid, AL_FORMAT_MONO16, samples, buf_size, sample_rate);
@@ -87,6 +94,17 @@ int main() {
 	//alSourcef(currentSourceID, AL_GAIN, newVolume); //to set volume of a source
 
 	sineW mySine;
+
+	//DONE: try to load in sound one unit at a time
+	//TODO: use this to do raytracing
+	//			- Draw rays. If they hit a surface, note it, calulate absorption, and reflect as many times as needed
+	//			- For every reflection, calculate total absorption and play a sound source at that location (sound * total absorption)
+	size_t sineSize = 0;
+	short* samplesInstance = new short[1];
+	samplesInstance[0] = mySine.samples[sineSize];
+	alBufferData(mySine.bufferid, AL_FORMAT_MONO16, samplesInstance, 1, mySine.sample_rate);
+	//alBufferData(mySine.bufferid, AL_FORMAT_MONO16, mySine.samples, 1, mySine.sample_rate);
+
 	alSourcei(mySine.sourceid, AL_BUFFER, mySine.bufferid);
 	alSourcePlay(mySine.sourceid);
 
@@ -102,7 +120,20 @@ int main() {
 			alSourcei(soundsFiles[i]->sourceid, AL_LOOPING, AL_TRUE); // makes the sound continuously loop once initiated
 		}
 
-		alSourcei(mySine.sourceid, AL_LOOPING, AL_TRUE);
+		// This attempts to play one bit of the sine wave
+		// While it technically works, the process can cause some audio tearing
+		// Overall, it works as well as playing the audio non-stop
+		#pragma region playBit
+		if (mySine.getState() == AL_STOPPED) {
+			sineSize = (sineSize + 1) % mySine.buf_size;
+			samplesInstance[0] = mySine.samples[sineSize];
+			alBufferData(mySine.bufferid, AL_FORMAT_MONO16, samplesInstance, 1, mySine.sample_rate);
+			alSourcePlay(mySine.sourceid);
+		}
+		#pragma endregion playBit
+
+		// activate if playing a whole array
+		//alSourcei(mySine.sourceid, AL_LOOPING, AL_TRUE);
 		
 		//position of listener
 		float playerVec[] = { me.f.x, me.f.y, me.f.z,//forward
@@ -122,6 +153,7 @@ int main() {
 	alDeleteSources(1, &(mySine.sourceid));
 	alDeleteBuffers(1, &(mySine.bufferid));
 	delete[] mySine.samples;
+	delete[] samplesInstance;
 
 	deleteSoundFiles(soundsFiles);
 	freeContext(device, context);

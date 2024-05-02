@@ -11,6 +11,4 @@ TODO:
 	- w.r.t. xz-plane
 	- movement affected
 - Raytraced audio
-- movement revamp to modify listener position
-	- integrate velocity (for doppler shift)
-- Computer generated audio
+- integrate velocity (for doppler shift)
