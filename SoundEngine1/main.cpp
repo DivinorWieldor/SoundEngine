@@ -2,10 +2,12 @@
 #include <string>
 #include <vector>
 #include <math.h>
-#include<windows.h>
+#include <windows.h>
 
 #include <AL/al.h>
 #include <AL/alc.h>
+
+#include <glm.hpp>
 
 #define SDL_MAIN_HANDLED
 #include <SDL/SDL.h>
@@ -54,6 +56,8 @@ struct sineW { //https://stackoverflow.com/questions/5469030/c-play-back-a-tone-
 	}
 };
 
+glm::vec3 hitPos(){}
+
 int main() {
 	//set up openAL context
 	ALCdevice* device;
@@ -63,13 +67,11 @@ int main() {
 	//set up audio sources
 	//set up sources loaded from files
 	//each sound is assigned to keys [1-9]. Press ["] to make them all stop
-	std::vector<std::string> soundFiles(
-										{	"./sounds/chirp.wav",
+	std::vector<std::string> soundFiles({	"./sounds/chirp.wav",
 											"./sounds/sine.wav",
 											"./sounds/sine_beeping.wav",
 											"./sounds/whitenoise.wav" 
-										}
-									   );
+										});
 	std::vector<soundFile*> soundsFiles = createSounds(soundFiles);
 
 
@@ -99,6 +101,14 @@ int main() {
 	//TODO: use this to do raytracing
 	//			- Draw rays. If they hit a surface, note it, calulate absorption, and reflect as many times as needed
 	//			- For every reflection, calculate total absorption and play a sound source at that location (sound * total absorption)
+	//REQUIREMENTS: - Reflection getter (from incoming angle + normal vector of surface): Returns the reflected ray's vector
+	//				- Ray Thrower (from Listener position, throws N rays everywhere): Returns a list of ray vectors
+	//				- HitPos (from ray vector + all surfaces): Returns which surface was hit and where
+	//				- CollisionsGetter: Combines all of these. Returns a list of all collisions' locations and the attenuation at that location
+	//				- SoundSourceMaker (from soundBit, attenuation score, and location): Creates a new sound source at the collision spot
+	//																					Sources must be deleted as soon as they finish playing!!!!
+	//																					Check in like 2-3 frames
+
 	size_t sineSize = 0;
 	short* samplesInstance = new short[1];
 	samplesInstance[0] = mySine.samples[sineSize];
@@ -116,9 +126,11 @@ int main() {
 
 		//position of sound source for sounds loaded from file
 		for (int i = 0; i < soundsFiles.size(); i++) {
-			alSource3f(soundsFiles[i]->sourceid, AL_POSITION, soundsFiles[i]->x, soundsFiles[i]->y, soundsFiles[i]->z);
+			alSource3f(soundsFiles[i]->sourceid, AL_POSITION, soundsFiles[i]->pos.x, soundsFiles[i]->pos.y, soundsFiles[i]->pos.z);
 			alSourcei(soundsFiles[i]->sourceid, AL_LOOPING, AL_TRUE); // makes the sound continuously loop once initiated
 		}
+
+
 
 		// This attempts to play one bit of the sine wave
 		// While it technically works, the process can cause some audio tearing

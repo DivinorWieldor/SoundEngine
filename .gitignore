@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 openal-soft/
 SoundEngine1/vcpkg/
+GLM/
