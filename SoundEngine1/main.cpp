@@ -132,7 +132,7 @@ int main() {
 		}
 		#pragma endregion playBit
 
-		// activate if playing a whole array
+		// activate if playing a whole array (!playBit)
 		//alSourcei(mySine.sourceid, AL_LOOPING, AL_TRUE);
 		
 		//position of listener
@@ -140,14 +140,14 @@ int main() {
 							me.up.x, me.up.y, me.up.z };//up
 		alListenerfv(AL_ORIENTATION, playerVec);
 		
+
+
+
 		//necessary for sound playing when moving
 		if (1000 / 30 > SDL_GetTicks64() - start) {
 			SDL_Delay(1000 / 30 - (SDL_GetTicks64() - start));
 		}
 	}
-	
-
-	
 
 	//program termination
 	alDeleteSources(1, &(mySine.sourceid));
