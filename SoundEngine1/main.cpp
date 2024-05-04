@@ -56,8 +56,6 @@ struct sineW { //https://stackoverflow.com/questions/5469030/c-play-back-a-tone-
 	}
 };
 
-glm::vec3 hitPos(){}
-
 int main() {
 	//set up openAL context
 	ALCdevice* device;
@@ -89,6 +87,8 @@ int main() {
 	float speed = 0.1;
 	float sensitivity = 0.005; //in degrees?
 	Listener me;
+	Sphere newSphere;
+	spheres[0] = newSphere;
 
 	//set global volume
 	float volume = 1;
