@@ -84,7 +84,7 @@ struct sineW { //https://stackoverflow.com/questions/5469030/c-play-back-a-tone-
 		}
 
 		/* Download buffer to OpenAL ---- don't do this immediately, user may want to do it later! */
-		//alBufferData(bufferid, AL_FORMAT_MONO16, samples, buf_size, sample_rate);
+		alBufferData(bufferid, AL_FORMAT_MONO16, samples, buf_size, sample_rate);
 		//alSourcei(sourceid, AL_BUFFER, bufferid);
 	}
 
