@@ -15,47 +15,6 @@
 
 using namespace std;
 
-template <typename T> int sgn(T val) {
-	return (T(0) < val) - (val < T(0));
-}
-
-struct sineW { //https://stackoverflow.com/questions/5469030/c-play-back-a-tone-generated-from-a-sinusoidal-wave
-	unsigned int sourceid, bufferid;//required at post-initialization
-	float freq;						//frequency of sine wave
-	int seconds;					//how long it is active (ideally for one phase)
-	unsigned int sample_rate;		//sample rate of the sine wave
-	size_t buf_size;				//calculated by: seconds * sample_rate
-
-	short* samples;					//array: new short[buf_size]
-
-	int getState() {
-		int State;
-		alGetSourcei(sourceid, AL_SOURCE_STATE, &State);
-		return State;
-	}
-
-	sineW(float _freq = 440, int _seconds = 1, unsigned int _sample_rate = 22050)
-		: freq(_freq), seconds(_seconds), sample_rate(_sample_rate)
-	{
-		alGenBuffers(1, &bufferid);
-		alGenSources(1, &sourceid);
-		buf_size = seconds * sample_rate;
-		samples = new short[buf_size];
-
-		//populate sample buffer
-		for(int i=0; i<buf_size; ++i)
-			//samples[i] = 32768 * 2 * (i * freq - int((i * freq) + 0.5)) / sample_rate;//sawtooth - does not work
-			//samples[i] = 32768 * (2/M_PI) * asin(sin((2 * M_PI * freq * i) / sample_rate));//triangle
-			//samples[i] = 32768 * sgn(cos((2 * M_PI * freq * i) / sample_rate));			//square
-			samples[i] = 32768 * cos( (2*M_PI * freq * i)/sample_rate);						//sin or cos
-		// 32760 because we use mono16, and 16 bits is 32768 (ignoring last digit cuz lazy)
-		samples[0] = samples[buf_size-1]; //i=0 causes issues, set it to one previous
-
-		/* Download buffer to OpenAL */
-		alBufferData(bufferid, AL_FORMAT_MONO16, samples, buf_size, sample_rate);
-	}
-};
-
 int main() {
 	//set up openAL context
 	ALCdevice* device;
@@ -131,16 +90,20 @@ int main() {
 			//ray = GetRandomRay(me);
 			reflectedRays = RayTracer(GetRandomRay(me)); //compute valid reflections of one ray
 			
-			cout << "-------------- batch " << i << " -----------------" << endl;
-			for (int j = 0; j < reflectedRays.size(); j++) {
+			/*cout << "-------------- batch " << i << " -----------------" << endl;
+			for (int j = 0; j < reflectedRays.size(); j++)
 				cout << "ray " << j << ":\t" << reflectedRays[j].hit.position.x << "\t" << reflectedRays[j].hit.position.y << "\t" << reflectedRays[j].hit.position.z
-					<< "\tsound Multiplier: " << reflectedRays[j].totalAbsorbed << endl;
-			}
+					<< "\tsound Multiplier: " << reflectedRays[j].totalAbsorbed << endl;*/
+			
 			allReflections.insert(allReflections.end(), reflectedRays.begin(), reflectedRays.end()); //bunch up all reflections
 			reflectedRays.clear();
 		}
 		//TODO: create sounds at these locations. At the end of the while loop, delete them all. (stored in allReflections)
-
+		cout << "--------------- size: " << allReflections.size() << " ----------------" << endl;
+		for (int i = 0; i < allReflections.size(); i++){
+			cout << "ray " << i << ":\t" << allReflections[i].hit.position.x << "\t" << allReflections[i].hit.position.y << "\t" << allReflections[i].hit.position.z
+				<< "\tsound Multiplier: " << allReflections[i].totalAbsorbed << endl;
+		}
 
 		//process key inputs
 		keyInput(running, speed, sensitivity, me, soundsFiles);
@@ -173,8 +136,13 @@ int main() {
 							me.up.x, me.up.y, me.up.z };//up
 		alListenerfv(AL_ORIENTATION, playerVec);
 		
-
-
+		//clean up sound sources - handle memory leaks
+		for (int i = 0; i < allReflections.size(); i++) {
+			alDeleteSources(1, &(allReflections[i].sound.sourceid));
+			alDeleteBuffers(1, &(allReflections[i].sound.bufferid));
+			delete[] allReflections[i].sound.samples;
+		}
+		allReflections.clear(); //clean rays buffer
 
 		//necessary for sound playing when moving
 		if (1000 / 30 > SDL_GetTicks64() - start) {

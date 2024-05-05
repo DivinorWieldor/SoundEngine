@@ -15,3 +15,6 @@ TODO:
 	- Implement plane equation
 		- Implement polygons for complex objects
 - integrate velocity (for doppler shift)
+
+Limitations:
+- ALSOFT has a 256 sound source limit! [solutions?](https://stackoverflow.com/questions/28141817)
