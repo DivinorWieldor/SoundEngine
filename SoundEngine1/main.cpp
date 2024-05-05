@@ -83,7 +83,7 @@ int main() {
 
 	while (running) {
 		start = SDL_GetTicks64();
-		/*
+		
 		#pragma region RayTracing
 		//compute all valid rays and reflections
 		for (int i = 0; i < rayCount; i++) {
@@ -93,17 +93,18 @@ int main() {
 		}
 		//TODO: create sounds at these locations. At the end of the while loop, delete them all. (stored in allReflections)
 		//cout << "--------------- size: " << allReflections.size() << " ----------------" << endl;
-		//for (int i = 0; i < allReflections.size(); i++){
-		//	if(allReflections[i].sound.getState() == AL_STOPPED || allReflections[i].sound.getState() == AL_INITIAL){
-		//		//samplesInstance[0] = samplesInstance[0] * allReflections[i].totalAbsorbed;
-		//		alBufferData(allReflections[i].sound.bufferid, AL_FORMAT_MONO16, samplesInstance, 1, allReflections[i].sound.sample_rate);
-		//		alSourcef(allReflections[i].sound.sourceid, AL_GAIN, allReflections[i].totalAbsorbed); //to set volume of a source
-		//		alSourcePlay(allReflections[i].sound.sourceid);
-		//		//samplesInstance[0] = mySine.samples[sineSize];
-		//	}
-		//}
+		for (int i = 0; i < allReflections.size(); i++){
+			//if(allReflections[i].sound.getState() == AL_STOPPED || allReflections[i].sound.getState() == AL_INITIAL){
+				samplesInstance[0] = mySine.samples[sineSize] * allReflections[i].totalAbsorbed;
+
+				alBufferData(allReflections[i].sound.bufferid, AL_FORMAT_MONO16, samplesInstance, 1, allReflections[i].sound.sample_rate);
+				//alSourcef(allReflections[i].sound.sourceid, AL_GAIN, allReflections[i].totalAbsorbed); //to set volume of a source
+				alSourcei(allReflections[i].sound.sourceid, AL_BUFFER, allReflections[i].sound.bufferid);
+				alSourcePlay(allReflections[i].sound.sourceid);
+			//}
+		}
 		#pragma endregion RayTracing
-		*/
+		
 		//process key inputs
 		keyInput(running, speed, sensitivity, me, soundsFiles);
 
@@ -118,9 +119,11 @@ int main() {
 		// Overall, it works as well as playing the audio non-stop
 		#pragma region playBit
 		if (mySine.getState() == AL_STOPPED) {
+			alSourceStop(mySine.sourceid);
 			sineSize = (sineSize + 1) % mySine.buf_size;
 			samplesInstance[0] = mySine.samples[sineSize];
 			alBufferData(mySine.bufferid, AL_FORMAT_MONO16, samplesInstance, 1, mySine.sample_rate);
+			alSourcei(mySine.sourceid, AL_BUFFER, mySine.bufferid);
 			alSourcePlay(mySine.sourceid);
 		}
 		#pragma endregion playBit
@@ -132,7 +135,7 @@ int main() {
 		float playerVec[] = { me.f.x, me.f.y, me.f.z,//forward
 							me.up.x, me.up.y, me.up.z };//up
 		alListenerfv(AL_ORIENTATION, playerVec);
-		/*
+		
 		//clean up sound sources - handle memory leaks
 		for (int i = 0; i < allReflections.size(); i++) {
 			alDeleteSources(1, &(allReflections[i].sound.sourceid));
@@ -140,7 +143,7 @@ int main() {
 			delete[] allReflections[i].sound.samples;
 		}
 		allReflections.clear(); //clean rays buffer
-		*/
+		
 		//necessary for sound playing when moving
 		if (1000 / 30 > SDL_GetTicks64() - start) {
 			SDL_Delay(1000 / 30 - (SDL_GetTicks64() - start));

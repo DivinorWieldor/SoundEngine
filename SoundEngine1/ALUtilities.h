@@ -72,7 +72,7 @@ struct sineW { //https://stackoverflow.com/questions/5469030/c-play-back-a-tone-
 		samples = new short[buf_size];
 		
 		//user may want to not create this now
-		if(generateBuffer){
+		//if(generateBuffer){
 			//populate sample buffer
 			for (int i = 0; i < buf_size; ++i)
 				//samples[i] = 32768 * 2 * (i * freq - int((i * freq) + 0.5)) / sample_rate;		//sawtooth - does not work
@@ -81,7 +81,7 @@ struct sineW { //https://stackoverflow.com/questions/5469030/c-play-back-a-tone-
 				samples[i] = 32768 * cos((2 * M_PI * freq * i) / sample_rate);					//sin or cos
 			// 32760 because we use mono16, and 16 bits is 32768 (ignoring last digit cuz lazy)
 			samples[0] = samples[buf_size - 1]; //i=0 causes issues, set it to one previous
-		}
+		//}
 
 		/* Download buffer to OpenAL ---- don't do this immediately, user may want to do it later! */
 		alBufferData(bufferid, AL_FORMAT_MONO16, samples, buf_size, sample_rate);
