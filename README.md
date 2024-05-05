@@ -11,4 +11,7 @@ TODO:
 	- w.r.t. xz-plane
 	- movement affected
 - Raytraced audio
+	- Play sound at reflection positions
+	- Implement plane equation
+		- Implement polygons for complex objects
 - integrate velocity (for doppler shift)
