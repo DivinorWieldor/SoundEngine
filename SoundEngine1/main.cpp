@@ -87,8 +87,9 @@ int main() {
 	float speed = 0.1;
 	float sensitivity = 0.005; //in degrees?
 	Listener me;
-	Sphere newSphere;
-	spheres[0] = newSphere;
+	//Sphere newSphere;
+	//spheres[0] = newSphere;
+	int rayCount = 10;
 
 	//set global volume
 	float volume = 1;
@@ -107,7 +108,7 @@ int main() {
 	//				- CollisionsGetter: Combines all of these. Returns a list of all collisions' locations and the attenuation at that location
 	//				- SoundSourceMaker (from soundBit, attenuation score, and location): Creates a new sound source at the collision spot
 	//																					Sources must be deleted as soon as they finish playing!!!!
-	//																					Check in like 2-3 frames
+	//																					Check in like 2-3 frames --> causes noticable tearing
 
 	size_t sineSize = 0;
 	short* samplesInstance = new short[1];
@@ -118,8 +119,28 @@ int main() {
 	alSourcei(mySine.sourceid, AL_BUFFER, mySine.bufferid);
 	alSourcePlay(mySine.sourceid);
 
+	//Ray ray;
+	std::vector<reflectInfo> reflectedRays;
+	std::vector<reflectInfo> allReflections;
+
 	while (running) {
 		start = SDL_GetTicks64();
+
+		//compute all valid rays and reflections
+		for (int i = 0; i < rayCount; i++) {
+			//ray = GetRandomRay(me);
+			reflectedRays = RayTracer(GetRandomRay(me)); //compute valid reflections of one ray
+			
+			cout << "-------------- batch " << i << " -----------------" << endl;
+			for (int j = 0; j < reflectedRays.size(); j++) {
+				cout << "ray " << j << ":\t" << reflectedRays[j].hit.position.x << "\t" << reflectedRays[j].hit.position.y << "\t" << reflectedRays[j].hit.position.z
+					<< "\tsound Multiplier: " << reflectedRays[j].totalAbsorbed << endl;
+			}
+			allReflections.insert(allReflections.end(), reflectedRays.begin(), reflectedRays.end()); //bunch up all reflections
+			reflectedRays.clear();
+		}
+		//TODO: create sounds at these locations. At the end of the while loop, delete them all. (stored in allReflections)
+
 
 		//process key inputs
 		keyInput(running, speed, sensitivity, me, soundsFiles);
