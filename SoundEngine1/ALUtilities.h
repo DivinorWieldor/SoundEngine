@@ -45,6 +45,9 @@ struct soundFile {
 	soundFile(std::string _name) : name(_name) {}
 };
 
+template <typename T> int sgn(T val) {
+	return (T(0) < val) - (val < T(0));
+}
 struct sineW { //https://stackoverflow.com/questions/5469030/c-play-back-a-tone-generated-from-a-sinusoidal-wave
 	unsigned int sourceid, bufferid;//required at post-initialization
 	float freq;						//frequency of sine wave
@@ -60,29 +63,36 @@ struct sineW { //https://stackoverflow.com/questions/5469030/c-play-back-a-tone-
 		return State;
 	}
 
-	template <typename T> int sgn(T val) {
-		return (T(0) < val) - (val < T(0));
-	}
-	sineW(float _freq = 440, int _seconds = 1, unsigned int _sample_rate = 22050)
+	sineW(float _freq = 440, int _seconds = 1, unsigned int _sample_rate = 22050, bool generateBuffer = true)
 		: freq(_freq), seconds(_seconds), sample_rate(_sample_rate)
 	{
 		alGenBuffers(1, &bufferid);
 		alGenSources(1, &sourceid);
 		buf_size = seconds * sample_rate;
 		samples = new short[buf_size];
+		
+		//user may want to not create this now
+		if(generateBuffer){
+			//populate sample buffer
+			for (int i = 0; i < buf_size; ++i)
+				//samples[i] = 32768 * 2 * (i * freq - int((i * freq) + 0.5)) / sample_rate;		//sawtooth - does not work
+				//samples[i] = 32768 * (2/M_PI) * asin(sin((2 * M_PI * freq * i) / sample_rate));	//triangle
+				//samples[i] = 32768 * sgn(cos((2 * M_PI * freq * i) / sample_rate));				//square
+				samples[i] = 32768 * cos((2 * M_PI * freq * i) / sample_rate);					//sin or cos
+			// 32760 because we use mono16, and 16 bits is 32768 (ignoring last digit cuz lazy)
+			samples[0] = samples[buf_size - 1]; //i=0 causes issues, set it to one previous
+		}
 
-		//populate sample buffer
-		for (int i = 0; i < buf_size; ++i)
-			//samples[i] = 32768 * 2 * (i * freq - int((i * freq) + 0.5)) / sample_rate;//sawtooth - does not work
-			//samples[i] = 32768 * (2/M_PI) * asin(sin((2 * M_PI * freq * i) / sample_rate));//triangle
-			//samples[i] = 32768 * sgn(cos((2 * M_PI * freq * i) / sample_rate));			//square
-			samples[i] = 32768 * cos((2 * M_PI * freq * i) / sample_rate);						//sin or cos
-		// 32760 because we use mono16, and 16 bits is 32768 (ignoring last digit cuz lazy)
-		samples[0] = samples[buf_size - 1]; //i=0 causes issues, set it to one previous
-
-		/* Download buffer to OpenAL */
-		alBufferData(bufferid, AL_FORMAT_MONO16, samples, buf_size, sample_rate);
+		/* Download buffer to OpenAL ---- don't do this immediately, user may want to do it later! */
+		//alBufferData(bufferid, AL_FORMAT_MONO16, samples, buf_size, sample_rate);
+		//alSourcei(sourceid, AL_BUFFER, bufferid);
 	}
+
+	/*~sineW() {
+		alDeleteSources(1, &sourceid);
+		alDeleteBuffers(1, &bufferid);
+		delete[] samples;
+	}*/
 };
 #pragma endregion structs
 
@@ -162,7 +172,7 @@ struct HitInfo {
 };
 
 struct reflectInfo {
-	sineW sound;
+	sineW sound = sineW(440, 1, 22050, false);
 	HitInfo hit;
 	float totalAbsorbed; // multiply with original sound source to get dampened sound (reduced amplitude)
 
