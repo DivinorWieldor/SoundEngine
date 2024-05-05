@@ -55,8 +55,6 @@ int main() {
 	alListenerf(AL_GAIN, volume); //appears to only accept values between (0,1)
 	//alSourcef(currentSourceID, AL_GAIN, newVolume); //to set volume of a source
 
-	sineW mySine;
-
 	//DONE: try to load in sound one unit at a time
 	//TODO: use this to do raytracing
 	//			- Draw rays. If they hit a surface, note it, calulate absorption, and reflect as many times as needed
@@ -68,12 +66,13 @@ int main() {
 	//				- SoundSourceMaker (from soundBit, attenuation score, and location): Creates a new sound source at the collision spot
 	//																					Sources must be deleted as soon as they finish playing!!!!
 	//																					Check in like 2-3 frames --> causes noticable tearing
+	sineW mySine;
 
 	size_t sineSize = 0;
 	short* samplesInstance = new short[1];
 	samplesInstance[0] = mySine.samples[sineSize];
 	alBufferData(mySine.bufferid, AL_FORMAT_MONO16, samplesInstance, 1, mySine.sample_rate);
-	//alBufferData(mySine.bufferid, AL_FORMAT_MONO16, mySine.samples, 1, mySine.sample_rate);
+	//alBufferData(mySine.bufferid, AL_FORMAT_MONO16, mySine.samples, mySine.buf_size, mySine.sample_rate);
 
 	alSourcei(mySine.sourceid, AL_BUFFER, mySine.bufferid);
 	alSourcePlay(mySine.sourceid);
@@ -84,27 +83,27 @@ int main() {
 
 	while (running) {
 		start = SDL_GetTicks64();
-
+		/*
+		#pragma region RayTracing
 		//compute all valid rays and reflections
 		for (int i = 0; i < rayCount; i++) {
-			//ray = GetRandomRay(me);
 			reflectedRays = RayTracer(GetRandomRay(me)); //compute valid reflections of one ray
-			
-			/*cout << "-------------- batch " << i << " -----------------" << endl;
-			for (int j = 0; j < reflectedRays.size(); j++)
-				cout << "ray " << j << ":\t" << reflectedRays[j].hit.position.x << "\t" << reflectedRays[j].hit.position.y << "\t" << reflectedRays[j].hit.position.z
-					<< "\tsound Multiplier: " << reflectedRays[j].totalAbsorbed << endl;*/
-			
 			allReflections.insert(allReflections.end(), reflectedRays.begin(), reflectedRays.end()); //bunch up all reflections
 			reflectedRays.clear();
 		}
 		//TODO: create sounds at these locations. At the end of the while loop, delete them all. (stored in allReflections)
-		cout << "--------------- size: " << allReflections.size() << " ----------------" << endl;
-		for (int i = 0; i < allReflections.size(); i++){
-			cout << "ray " << i << ":\t" << allReflections[i].hit.position.x << "\t" << allReflections[i].hit.position.y << "\t" << allReflections[i].hit.position.z
-				<< "\tsound Multiplier: " << allReflections[i].totalAbsorbed << endl;
-		}
-
+		//cout << "--------------- size: " << allReflections.size() << " ----------------" << endl;
+		//for (int i = 0; i < allReflections.size(); i++){
+		//	if(allReflections[i].sound.getState() == AL_STOPPED || allReflections[i].sound.getState() == AL_INITIAL){
+		//		//samplesInstance[0] = samplesInstance[0] * allReflections[i].totalAbsorbed;
+		//		alBufferData(allReflections[i].sound.bufferid, AL_FORMAT_MONO16, samplesInstance, 1, allReflections[i].sound.sample_rate);
+		//		alSourcef(allReflections[i].sound.sourceid, AL_GAIN, allReflections[i].totalAbsorbed); //to set volume of a source
+		//		alSourcePlay(allReflections[i].sound.sourceid);
+		//		//samplesInstance[0] = mySine.samples[sineSize];
+		//	}
+		//}
+		#pragma endregion RayTracing
+		*/
 		//process key inputs
 		keyInput(running, speed, sensitivity, me, soundsFiles);
 
@@ -113,8 +112,6 @@ int main() {
 			alSource3f(soundsFiles[i]->sourceid, AL_POSITION, soundsFiles[i]->pos.x, soundsFiles[i]->pos.y, soundsFiles[i]->pos.z);
 			alSourcei(soundsFiles[i]->sourceid, AL_LOOPING, AL_TRUE); // makes the sound continuously loop once initiated
 		}
-
-
 
 		// This attempts to play one bit of the sine wave
 		// While it technically works, the process can cause some audio tearing
@@ -135,7 +132,7 @@ int main() {
 		float playerVec[] = { me.f.x, me.f.y, me.f.z,//forward
 							me.up.x, me.up.y, me.up.z };//up
 		alListenerfv(AL_ORIENTATION, playerVec);
-		
+		/*
 		//clean up sound sources - handle memory leaks
 		for (int i = 0; i < allReflections.size(); i++) {
 			alDeleteSources(1, &(allReflections[i].sound.sourceid));
@@ -143,7 +140,7 @@ int main() {
 			delete[] allReflections[i].sound.samples;
 		}
 		allReflections.clear(); //clean rays buffer
-
+		*/
 		//necessary for sound playing when moving
 		if (1000 / 30 > SDL_GetTicks64() - start) {
 			SDL_Delay(1000 / 30 - (SDL_GetTicks64() - start));

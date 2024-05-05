@@ -12,6 +12,7 @@ TODO:
 	- movement affected
 - Raytraced audio
 	- Play sound at reflection positions
+	- Implement material transitivity (allow some rays to move past materials. Will suffer greater dampening if this happens!)
 	- Implement plane equation
 		- Implement polygons for complex objects
 - integrate velocity (for doppler shift)
