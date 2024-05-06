@@ -3,6 +3,7 @@
 #include <vector>
 #include <math.h>
 #include <windows.h>
+#include <algorithm>
 
 #include <AL/al.h>
 #include <AL/alc.h>
@@ -66,12 +67,14 @@ int main() {
 	//				- SoundSourceMaker (from soundBit, attenuation score, and location): Creates a new sound source at the collision spot
 	//																					Sources must be deleted as soon as they finish playing!!!!
 	//																					Check in like 2-3 frames --> causes noticable tearing
-	sineW mySine;
-
+	
+	const int sampleSize = 2; // must be able to divide buffer size!
+	sineW mySine /*= sineW(440, 1, sampleSize, true)*/;
+	
 	size_t sineSize = 0;
-	short* samplesInstance = new short[1];
-	samplesInstance[0] = mySine.samples[sineSize];
-	alBufferData(mySine.bufferid, AL_FORMAT_MONO16, samplesInstance, 1, mySine.sample_rate);
+	short* samplesInstance = new short[sampleSize];
+	copy_n(mySine.samples + sineSize, sampleSize, samplesInstance);//copy first 5 samples elements to samplesInstance
+	alBufferData(mySine.bufferid, AL_FORMAT_MONO16, samplesInstance, 2, mySine.sample_rate);
 	//alBufferData(mySine.bufferid, AL_FORMAT_MONO16, mySine.samples, mySine.buf_size, mySine.sample_rate);
 
 	alSourcei(mySine.sourceid, AL_BUFFER, mySine.bufferid);
@@ -95,11 +98,14 @@ int main() {
 		//cout << "--------------- size: " << allReflections.size() << " ----------------" << endl;
 		for (int i = 0; i < allReflections.size(); i++){
 			//if(allReflections[i].sound.getState() == AL_STOPPED || allReflections[i].sound.getState() == AL_INITIAL){
-				samplesInstance[0] = mySine.samples[sineSize] * allReflections[i].totalAbsorbed;
+				//copy_n(mySine.samples + sineSize, sampleSize, samplesInstance);
+				//samplesInstance[0] = mySine.samples[sineSize] * allReflections[i].totalAbsorbed;
+				//samplesInstance[1] = mySine.samples[sineSize + 1] * allReflections[i].totalAbsorbed;
 
-				alBufferData(allReflections[i].sound.bufferid, AL_FORMAT_MONO16, samplesInstance, 1, allReflections[i].sound.sample_rate);
-				//alSourcef(allReflections[i].sound.sourceid, AL_GAIN, allReflections[i].totalAbsorbed); //to set volume of a source
+				alBufferData(allReflections[i].sound.bufferid, AL_FORMAT_MONO16, samplesInstance, sampleSize, sampleSize);
+				alSourcef(allReflections[i].sound.sourceid, AL_GAIN, allReflections[i].totalAbsorbed); //to set volume of a source
 				alSourcei(allReflections[i].sound.sourceid, AL_BUFFER, allReflections[i].sound.bufferid);
+				alSource3f(allReflections[i].sound.sourceid, AL_POSITION, allReflections[i].hit.position.x, allReflections[i].hit.position.y, allReflections[i].hit.position.z);
 				alSourcePlay(allReflections[i].sound.sourceid);
 			//}
 		}
@@ -119,11 +125,18 @@ int main() {
 		// Overall, it works as well as playing the audio non-stop
 		#pragma region playBit
 		if (mySine.getState() == AL_STOPPED) {
-			alSourceStop(mySine.sourceid);
-			sineSize = (sineSize + 1) % mySine.buf_size;
-			samplesInstance[0] = mySine.samples[sineSize];
-			alBufferData(mySine.bufferid, AL_FORMAT_MONO16, samplesInstance, 1, mySine.sample_rate);
-			alSourcei(mySine.sourceid, AL_BUFFER, mySine.bufferid);
+			sineSize = (sineSize + sampleSize) % mySine.buf_size;
+			//copy_n(mySine.samples + sineSize, sampleSize, samplesInstance);
+			samplesInstance[0] = SineBit(mySine.freq, sineSize, 2);
+			samplesInstance[1] = SineBit(mySine.freq, sineSize+1, 2);
+
+			//alDeleteSources(1, &(mySine.sourceid));
+			//alDeleteBuffers(1, &(mySine.bufferid));
+			//alGenBuffers(1, &(mySine.bufferid));
+			//alGenSources(1, &(mySine.sourceid));
+
+			alBufferData(mySine.bufferid, AL_FORMAT_MONO16, samplesInstance, sampleSize, mySine.sample_rate);
+			//alSourcei(mySine.sourceid, AL_BUFFER, mySine.bufferid);
 			alSourcePlay(mySine.sourceid);
 		}
 		#pragma endregion playBit

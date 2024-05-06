@@ -86,6 +86,7 @@ struct sineW { //https://stackoverflow.com/questions/5469030/c-play-back-a-tone-
 		/* Download buffer to OpenAL ---- don't do this immediately, user may want to do it later! */
 		alBufferData(bufferid, AL_FORMAT_MONO16, samples, buf_size, sample_rate);
 		//alSourcei(sourceid, AL_BUFFER, bufferid);
+
 	}
 
 	/*~sineW() {
@@ -107,6 +108,7 @@ void deleteSoundFile(soundFile &sf);
 void deleteSoundFiles(std::vector<soundFile*> &soundFiles);
 
 //utilities
+short SineBit(float freq, int instance, float sample_rate);
 void getAudioFormat(int channel, int bps, unsigned int& format);
 void initAudioSource(soundFile& sFile);
 void keyInput(bool& running, float speed, float sensitivity, Listener& player, std::vector<soundFile*>& sounds);

@@ -153,6 +153,10 @@ void SDLSetup(SDL_Window*& window, SDL_Surface*& screenSurface, int height, int 
 	}
 }
 
+short SineBit(float freq, int instance, float sample_rate){
+	return 32768 * cos((2 * M_PI * freq * instance) / sample_rate);
+}
+
 /**
  * detects and sets audio format
  * decides between MONO vs STEREO channel and 8 vs 16 bps
