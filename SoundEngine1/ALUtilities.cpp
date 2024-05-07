@@ -153,10 +153,6 @@ void SDLSetup(SDL_Window*& window, SDL_Surface*& screenSurface, int height, int 
 	}
 }
 
-short SineBit(float freq, int instance, float sample_rate){
-	return 32768 * cos((2 * M_PI * freq * instance) / sample_rate);
-}
-
 /**
  * detects and sets audio format
  * decides between MONO vs STEREO channel and 8 vs 16 bps
@@ -443,7 +439,7 @@ std::vector<reflectInfo> RayTracer(Ray ray) {
 				// clr += vec3(h.normal); // Test reflection intersections
 				// clr += vec3(1.0, 0.0, 0.0);
 				//clr += Shade(h.mtl, h.position, h.normal, view);
-				reflectInfo newReflectedSound(h, reflectedSources.back().totalAbsorbed); // TODO: this needs to be filled with sound source information as soon as you know it!
+				reflectInfo newReflectedSound(h, reflectedSources.back().totalAbsorbed); // TODO: this needs to be filled with sound source information as soon as you know it! (will be done when we start detecting for real sound sources)
 				reflectedSources.push_back(newReflectedSound);
 
 				// Update the loop variables for tracing the next reflection ray

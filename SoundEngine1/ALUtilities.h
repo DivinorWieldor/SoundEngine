@@ -68,11 +68,11 @@ struct sineW { //https://stackoverflow.com/questions/5469030/c-play-back-a-tone-
 	{
 		alGenBuffers(1, &bufferid);
 		alGenSources(1, &sourceid);
+
 		buf_size = seconds * sample_rate;
-		samples = new short[buf_size];
-		
 		//user may want to not create this now
-		//if(generateBuffer){
+		if(generateBuffer){
+			samples = new short[buf_size];
 			//populate sample buffer
 			for (int i = 0; i < buf_size; ++i)
 				//samples[i] = 32768 * 2 * (i * freq - int((i * freq) + 0.5)) / sample_rate;		//sawtooth - does not work
@@ -81,12 +81,11 @@ struct sineW { //https://stackoverflow.com/questions/5469030/c-play-back-a-tone-
 				samples[i] = 32768 * cos((2 * M_PI * freq * i) / sample_rate);					//sin or cos
 			// 32760 because we use mono16, and 16 bits is 32768 (ignoring last digit cuz lazy)
 			samples[0] = samples[buf_size - 1]; //i=0 causes issues, set it to one previous
-		//}
 
-		/* Download buffer to OpenAL ---- don't do this immediately, user may want to do it later! */
-		alBufferData(bufferid, AL_FORMAT_MONO16, samples, buf_size, sample_rate);
+			/* Download buffer to OpenAL ---- don't do this immediately, user may want to do it later! */
+			alBufferData(bufferid, AL_FORMAT_MONO16, samples, buf_size, sample_rate);
+		}
 		//alSourcei(sourceid, AL_BUFFER, bufferid);
-
 	}
 
 	short* sineSegment(float seconds, int segmentStart, unsigned int _sample_rate){
@@ -94,7 +93,7 @@ struct sineW { //https://stackoverflow.com/questions/5469030/c-play-back-a-tone-
 
 		for (int i = 0; i < int(seconds * _sample_rate); ++i)
 			samplesSegment[i] = 32768 * cos((2 * M_PI * freq * (int(seconds * _sample_rate) +i)) / sample_rate);	//sin or cos
-		samplesSegment[0] = samples[int(seconds * _sample_rate) - 1]; //i=0 causes issues, set it to one previous
+		samplesSegment[0] = samplesSegment[int(seconds * _sample_rate) - 1]; //i=0 causes issues, set it to one previous
 	
 		return samplesSegment;
 	}
@@ -118,7 +117,6 @@ void deleteSoundFile(soundFile &sf);
 void deleteSoundFiles(std::vector<soundFile*> &soundFiles);
 
 //utilities
-short SineBit(float freq, int instance, float sample_rate);
 void getAudioFormat(int channel, int bps, unsigned int& format);
 void initAudioSource(soundFile& sFile);
 void keyInput(bool& running, float speed, float sensitivity, Listener& player, std::vector<soundFile*>& sounds);
@@ -155,12 +153,12 @@ public:
 };
 
 struct Material {
-	float absorb;	// absorption modifier (ranges from 0.0 to 1.0)
+	float notAbsorbed;	// absorption modifier (ranges from 0.0 to 1.0)
 	//may also have a scatter modifier (how much randomization to add to reflection) -> not sure if necessary
 
-	Material() : absorb(0.3) {}
+	Material(float _absorbModifier = 0.4) : notAbsorbed(_absorbModifier) {}
 
-	float soundDampenPercent() { return absorb; }
+	float soundDampenPercent() { return notAbsorbed; }
 };
 
 struct Sphere {
