@@ -68,14 +68,14 @@ int main() {
 	//																					Sources must be deleted as soon as they finish playing!!!!
 	//																					Check in like 2-3 frames --> causes noticable tearing
 	
-	const int sampleSize = 2; // must be able to divide buffer size!
-	sineW mySine /*= sineW(440, 1, sampleSize, true)*/;
-	
-	size_t sineSize = 0;
-	short* samplesInstance = new short[sampleSize];
-	copy_n(mySine.samples + sineSize, sampleSize, samplesInstance);//copy first 5 samples elements to samplesInstance
-	alBufferData(mySine.bufferid, AL_FORMAT_MONO16, samplesInstance, 2, mySine.sample_rate);
+	sineW mySine;
 	//alBufferData(mySine.bufferid, AL_FORMAT_MONO16, mySine.samples, mySine.buf_size, mySine.sample_rate);
+
+	//testing on playing sound bits :P
+	float segmentIncrement = 0;
+	float segmentLen = 0.2;
+	short* soundSegment = mySine.sineSegment(segmentLen, 0, mySine.sample_rate);
+	alBufferData(mySine.bufferid, AL_FORMAT_MONO16, soundSegment, int(segmentLen * mySine.sample_rate), mySine.sample_rate);
 
 	alSourcei(mySine.sourceid, AL_BUFFER, mySine.bufferid);
 	alSourcePlay(mySine.sourceid);
@@ -84,9 +84,16 @@ int main() {
 	std::vector<reflectInfo> reflectedRays;
 	std::vector<reflectInfo> allReflections;
 
+	/**
+	* Idea: do not play one bit!
+	* play the entire array but for one frame
+	* Then move the buffer elements left by one, calculate the rays, and play the buffer for one frame again
+	*/
+
 	while (running) {
 		start = SDL_GetTicks64();
 		
+		/*
 		#pragma region RayTracing
 		//compute all valid rays and reflections
 		for (int i = 0; i < rayCount; i++) {
@@ -110,7 +117,8 @@ int main() {
 			//}
 		}
 		#pragma endregion RayTracing
-		
+		*/
+
 		//process key inputs
 		keyInput(running, speed, sensitivity, me, soundsFiles);
 
@@ -125,18 +133,14 @@ int main() {
 		// Overall, it works as well as playing the audio non-stop
 		#pragma region playBit
 		if (mySine.getState() == AL_STOPPED) {
-			sineSize = (sineSize + sampleSize) % mySine.buf_size;
-			//copy_n(mySine.samples + sineSize, sampleSize, samplesInstance);
-			samplesInstance[0] = SineBit(mySine.freq, sineSize, 2);
-			samplesInstance[1] = SineBit(mySine.freq, sineSize+1, 2);
+			segmentIncrement += segmentLen;
+			soundSegment = mySine.sineSegment(segmentLen, segmentIncrement, mySine.sample_rate);
+			
+			alDeleteSources(1, &(mySine.sourceid));
+			alBufferData(mySine.bufferid, AL_FORMAT_MONO16, soundSegment, int(segmentLen * mySine.sample_rate), mySine.sample_rate);
+			alGenSources(1, &(mySine.sourceid));
+			alSourcei(mySine.sourceid, AL_BUFFER, mySine.bufferid);
 
-			//alDeleteSources(1, &(mySine.sourceid));
-			//alDeleteBuffers(1, &(mySine.bufferid));
-			//alGenBuffers(1, &(mySine.bufferid));
-			//alGenSources(1, &(mySine.sourceid));
-
-			alBufferData(mySine.bufferid, AL_FORMAT_MONO16, samplesInstance, sampleSize, mySine.sample_rate);
-			//alSourcei(mySine.sourceid, AL_BUFFER, mySine.bufferid);
 			alSourcePlay(mySine.sourceid);
 		}
 		#pragma endregion playBit
@@ -167,7 +171,7 @@ int main() {
 	alDeleteSources(1, &(mySine.sourceid));
 	alDeleteBuffers(1, &(mySine.bufferid));
 	delete[] mySine.samples;
-	delete[] samplesInstance;
+	delete[] soundSegment;
 
 	deleteSoundFiles(soundsFiles);
 	freeContext(device, context);

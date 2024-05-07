@@ -89,6 +89,16 @@ struct sineW { //https://stackoverflow.com/questions/5469030/c-play-back-a-tone-
 
 	}
 
+	short* sineSegment(float seconds, int segmentStart, unsigned int _sample_rate){
+		short* samplesSegment = new short[int(seconds * _sample_rate)];
+
+		for (int i = 0; i < int(seconds * _sample_rate); ++i)
+			samplesSegment[i] = 32768 * cos((2 * M_PI * freq * (int(seconds * _sample_rate) +i)) / sample_rate);	//sin or cos
+		samplesSegment[0] = samples[int(seconds * _sample_rate) - 1]; //i=0 causes issues, set it to one previous
+	
+		return samplesSegment;
+	}
+
 	/*~sineW() {
 		alDeleteSources(1, &sourceid);
 		alDeleteBuffers(1, &bufferid);
