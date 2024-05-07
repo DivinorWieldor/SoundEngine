@@ -17,6 +17,9 @@ TODO:
 		- Implement polygons for complex objects
 - integrate velocity (for doppler shift)
 - Merge SoundFile and SineW
+- Improve performance
+	- reduce amount of if/else calls
+	- add a global buffer pool to pull from. Eliminates need to constantly generate and delete buffers
 
 Limitations:
 - ALSOFT has a 256 sound source limit! [solutions?](https://stackoverflow.com/questions/28141817)
