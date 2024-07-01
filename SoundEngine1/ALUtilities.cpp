@@ -361,6 +361,15 @@ void moveListener(glm::vec3 position, Listener& player) {
 #pragma endregion prototypes
 
 
+//Reverses the calculated order of reflection absorptions
+void ReverseAbsorptionOrder(std::vector<reflectInfo> &reflectedSources) {
+	float totalDampen = 1;
+
+	for (int i = reflectedSources.size() - 1; i >= 0; i--) {
+		totalDampen *= reflectedSources[i].hit.mtl.soundDampenPercent();
+		reflectedSources[i].totalAbsorbed = totalDampen;
+	}
+}
 
 // Intersects the given ray with all spheres in the scene
 // and updates the given HitInfo using the information of the sphere
@@ -420,7 +429,6 @@ std::vector<reflectInfo> RayTracer(Ray ray) {
 	HitInfo hit;
 	std::vector<reflectInfo> reflectedSources; // stores all sound source instances, the returned ones will play one bit of sound
 	int MAX_BOUNCES = 3;
-	int bounceLimit = 3;
 
 	if (IntersectRaySphere(hit, ray)) {
 		glm::vec3 view = normalize(-ray.getDir());
@@ -430,7 +438,6 @@ std::vector<reflectInfo> RayTracer(Ray ray) {
 
 		// Compute reflections
 		for (int bounce = 0; bounce < MAX_BOUNCES; ++bounce) {
-			if (bounce >= bounceLimit) break; // bounce limit reached
 
 			Ray r;	// this is the new reflection ray
 			HitInfo h;	// reflection new hit info
@@ -446,6 +453,7 @@ std::vector<reflectInfo> RayTracer(Ray ray) {
 				reflectedSources.push_back(newReflectedSound);
 
 				//TODO: This (sound absorption order) needs to be reversed if the rays are thrown from the camera! (camera is not the source)
+				ReverseAbsorptionOrder(reflectedSources);
 				if (h.mtl.isSource) return reflectedSources; // if the hit object is a sound source, stop tracing reflections
 
 				// Update the loop variables for tracing the next reflection ray
@@ -460,9 +468,7 @@ std::vector<reflectInfo> RayTracer(Ray ray) {
 			}
 		}
 
-		//TODO: How does this check if the thing hit a sound/light source? I don't get this part
-		//			Is it assuming the camera is the source?
-		//returns empty source buffer cuz no sound source was hit, use environment sound instead
+		//returns empty source buffer cuz no sound source was hit
 		for (int i = 0; i < reflectedSources.size(); i++) {
 			alDeleteSources(1, &(reflectedSources[i].sound.sourceid));
 			alDeleteBuffers(1, &(reflectedSources[i].sound.bufferid));

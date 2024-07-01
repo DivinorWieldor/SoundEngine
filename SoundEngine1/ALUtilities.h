@@ -198,6 +198,9 @@ struct reflectInfo {
 //uniform samplerCube envMap; //pretty sure this is just a cube map
 //int bounceLimit = 3; //don't understand why this is needed?
 
+//Reverses the calculated order of reflection absorptions
+void ReverseAbsorptionOrder(std::vector<reflectInfo>& reflectedSources);
+
 // Intersects the given ray with all spheres in the scene
 // and updates the given HitInfo using the information of the sphere
 // that first intersects with the ray.
