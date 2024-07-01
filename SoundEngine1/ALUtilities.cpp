@@ -384,6 +384,8 @@ bool IntersectRaySphere(HitInfo& hit, Ray ray) {
 	Sphere spheres[NUM_SPHERES]; //number of objects
 
 	Sphere newSphere;
+	newSphere.center.x = 3;
+
 	Sphere sourceSphere;
 	sourceSphere.mtl.isSource = true;
 	sourceSphere.radius = 1;

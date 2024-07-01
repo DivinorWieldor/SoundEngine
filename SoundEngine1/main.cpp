@@ -49,7 +49,7 @@ int main() {
 	Listener me;
 	//Sphere newSphere;
 	//spheres[0] = newSphere;
-	int rayCount = 30;
+	int rayCount = 200;
 
 	//set global volume
 	float volume = 1;
@@ -200,6 +200,7 @@ int main() {
 		if (1000 / 30 > SDL_GetTicks64() - start) {
 			SDL_Delay(1000 / 30 - (SDL_GetTicks64() - start));
 		}
+		cout << "FPS: " << (SDL_GetTicks64() - start) << endl;
 	}
 
 	//program termination
