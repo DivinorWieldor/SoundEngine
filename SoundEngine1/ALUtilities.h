@@ -153,7 +153,8 @@ public:
 };
 
 struct Material {
-	float notAbsorbed;	// absorption modifier (ranges from 0.0 to 1.0)
+	float	notAbsorbed;		// absorption modifier (ranges from 0.0 to 1.0)
+	bool	isSource = false;	//is this a sound source?
 	//may also have a scatter modifier (how much randomization to add to reflection) -> not sure if necessary
 
 	Material(float _absorbModifier = 0.4) : notAbsorbed(_absorbModifier) {}

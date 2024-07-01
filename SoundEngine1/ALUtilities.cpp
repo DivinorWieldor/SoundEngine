@@ -371,10 +371,16 @@ bool IntersectRaySphere(HitInfo& hit, Ray ray) {
 	bool foundHit = false;
 
 	//fucky wucky solution
-	const int NUM_SPHERES = 1;
+	const int NUM_SPHERES = 2;
 	Sphere spheres[NUM_SPHERES]; //number of objects
+
 	Sphere newSphere;
+	Sphere sourceSphere;
+	sourceSphere.mtl.isSource = true;
+	sourceSphere.radius = 1;
+
 	spheres[0] = newSphere;
+	spheres[1] = sourceSphere;
 
 	for (int i = 0; i < NUM_SPHERES; ++i) {
 		Sphere sphere = spheres[i];
@@ -418,16 +424,16 @@ std::vector<reflectInfo> RayTracer(Ray ray) {
 
 	if (IntersectRaySphere(hit, ray)) {
 		glm::vec3 view = normalize(-ray.getDir());
-		//vec3 clr = Shade( hit.mtl, hit.position, hit.normal, view );
 		reflectInfo newReflectedSound(hit);
 		reflectedSources.push_back(newReflectedSound);
+		if (hit.mtl.isSource) return reflectedSources; // if the hit object is a sound source, stop tracing reflections
 
 		// Compute reflections
 		for (int bounce = 0; bounce < MAX_BOUNCES; ++bounce) {
-			if (bounce >= bounceLimit) break;
+			if (bounce >= bounceLimit) break; // bounce limit reached
 
-			Ray r;	// this is the reflection ray
-			HitInfo h;	// reflection hit info
+			Ray r;	// this is the new reflection ray
+			HitInfo h;	// reflection new hit info
 
 			// Initialize the reflection ray
 			r.setDir(normalize(ray.getDir()) - 2 * dot(normalize(ray.getDir()), hit.normal) * hit.normal);
@@ -436,11 +442,11 @@ std::vector<reflectInfo> RayTracer(Ray ray) {
 
 			if (IntersectRaySphere(h, r)) {
 				// TODO: Hit found, so make a sound at the hit point (not implemented)
-				// clr += vec3(h.normal); // Test reflection intersections
-				// clr += vec3(1.0, 0.0, 0.0);
-				//clr += Shade(h.mtl, h.position, h.normal, view);
 				reflectInfo newReflectedSound(h, reflectedSources.back().totalAbsorbed); // TODO: this needs to be filled with sound source information as soon as you know it! (will be done when we start detecting for real sound sources)
 				reflectedSources.push_back(newReflectedSound);
+
+				//TODO: This (sound absorption order) needs to be reversed if the rays are thrown from the camera! (camera is not the source)
+				if (h.mtl.isSource) return reflectedSources; // if the hit object is a sound source, stop tracing reflections
 
 				// Update the loop variables for tracing the next reflection ray
 				hit = h;
@@ -456,8 +462,13 @@ std::vector<reflectInfo> RayTracer(Ray ray) {
 
 		//TODO: How does this check if the thing hit a sound/light source? I don't get this part
 		//			Is it assuming the camera is the source?
-		//TODO: This needs to be reversed if the rays are thrown from the camera! (camera is not the source)
-		return reflectedSources;	// TODO: return the accumulated sound, including the reflections. Create sound sources at these locations
+		//returns empty source buffer cuz no sound source was hit, use environment sound instead
+		for (int i = 0; i < reflectedSources.size(); i++) {
+			alDeleteSources(1, &(reflectedSources[i].sound.sourceid));
+			alDeleteBuffers(1, &(reflectedSources[i].sound.bufferid));
+		}
+		reflectedSources.clear();
+		return reflectedSources;	// TODO: return the environment sound
 	}
 	else
 		//returns empty source buffer

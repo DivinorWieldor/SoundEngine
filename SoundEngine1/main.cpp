@@ -81,10 +81,10 @@ int main() {
 	alSourcePlay(mySine.sourceid);
 
 
-	sineW mySine2 = sineW(880, 1, 22050);
+	/*sineW mySine2 = sineW(880, 1, 22050);
 	alSourcei(mySine2.sourceid, AL_BUFFER, mySine2.bufferid);
 	alSourcePlay(mySine2.sourceid);
-	alSourcei(mySine2.sourceid, AL_LOOPING, AL_TRUE);
+	alSourcei(mySine2.sourceid, AL_LOOPING, AL_TRUE);*/
 
 	//Ray ray;
 	std::vector<reflectInfo> reflectedRays;

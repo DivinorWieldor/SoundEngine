@@ -11,7 +11,7 @@ TODO:
 	- w.r.t. xz-plane
 	- movement affected
 - Raytraced audio
-	- Play sound at reflection positions
+	- Play sound at reflection positions ----> Seperate sound source and object. Currently, the sound source is any sphere object. Make this so that a valid sound source is when a specific object is hit
 	- Implement material transitivity (allow some rays to move past materials. Will suffer greater dampening if this happens!)
 	- Implement plane equation
 		- Implement polygons for complex objects
