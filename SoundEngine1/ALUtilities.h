@@ -167,7 +167,25 @@ struct Sphere {
 	float		radius;
 	Material	mtl;
 
-	Sphere() : center(glm::vec3(0, 0, 0)), radius(2) {};
+	Sphere() : center(glm::vec3(0, 0, 0)), radius(2) {}; // default sphere at origin with radius 2
+	Sphere(glm::vec3 _center, float	_radius) : center(_center), radius(_radius) {}; // sphere at given center with given radius
+	Sphere(glm::vec3 _center, float	_radius, bool _isSource) : center(_center), radius(_radius) { mtl.isSource = _isSource; }; // source sphere at given center with given radius
+};
+
+struct Triangle {
+	glm::vec3 v0, v1, v2;
+	Material mtl;
+
+	Triangle() : v0(glm::vec3(1, 0, 0)), v1(glm::vec3(0, 0, 0)), v2(glm::vec3(0, 0, 1)) {}; // default triangle
+	Triangle(glm::vec3 _v0, glm::vec3 _v1, glm::vec3 _v2) : v0(_v0), v1(_v1), v2(_v2) {}; // triangle with given vertices
+
+	//TODO: Maybe also have a second check for double sided triangles
+	// ie. getNormal() returns the normal of the triangle, but if the ray hits the back side, it should return the negative of the normal
+	glm::vec3 getNormal() {
+		glm::vec3 edge1 = v1 - v0;
+		glm::vec3 edge2 = v2 - v0;
+		return glm::normalize(glm::cross(edge1, edge2));
+	}
 };
 
 //struct Light { //for me this is sound

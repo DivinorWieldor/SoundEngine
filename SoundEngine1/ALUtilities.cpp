@@ -379,21 +379,15 @@ bool IntersectRaySphere(HitInfo& hit, Ray ray) {
 	hit.t = 1e30;
 	bool foundHit = false;
 
+	//TODO: remove these from the class. These should not be here, keep them in main
 	//fucky wucky solution
-	const int NUM_SPHERES = 2;
-	Sphere spheres[NUM_SPHERES]; //number of objects
+	std::vector<Sphere> spheres;
 
-	Sphere newSphere;
-	newSphere.center.x = 3;
+	spheres.push_back( Sphere(glm::vec3(3, 0, 0), 2) );
+	spheres.push_back( Sphere(glm::vec3(0, 0, 0), 1, true) ); // sound source
 
-	Sphere sourceSphere;
-	sourceSphere.mtl.isSource = true;
-	sourceSphere.radius = 1;
 
-	spheres[0] = newSphere;
-	spheres[1] = sourceSphere;
-
-	for (int i = 0; i < NUM_SPHERES; ++i) {
+	for (int i = 0; i < spheres.size(); ++i) {
 		Sphere sphere = spheres[i];
 
 		// Test for ray-sphere intersection; b^2 - 4ac
@@ -423,6 +417,65 @@ bool IntersectRaySphere(HitInfo& hit, Ray ray) {
 	return foundHit;
 }
 
+// Intersects the given ray with triangles in the scene
+// and updates the given HitInfo using the information of the triangle
+// that first intersects with the ray.
+// Returns true if an intersection is found.
+bool IntersectRayTriangle(HitInfo& hit, Ray ray) {
+	hit.t = 1e30;
+	bool foundHit = false;
+
+	std::vector<Triangle> triangles;
+
+	triangles.push_back( Triangle(glm::vec3(1, -1, 0), glm::vec3(-1, -1, 0), glm::vec3(0, -1, 1)) );
+	triangles.push_back( Triangle(glm::vec3(-1, -1, 0), glm::vec3(1, -1, 0), glm::vec3(0, -1, -1)) );
+
+	for (int i = 0; i < triangles.size(); ++i) {
+		Triangle& tri = triangles[i];
+
+		//calculate the normal of the triangle
+		glm::vec3 edge1 = tri.v1 - tri.v0;
+		glm::vec3 edge2 = tri.v2 - tri.v0;
+		glm::vec3 h = glm::cross(ray.getDir(), edge2);
+		float a = glm::dot(edge1, h);
+
+		#pragma region CheckIntersection
+		if (a > -1e-7 && a < 1e-7) // This means the ray is parallel to the triangle. No intersection so we skip this triangle
+			continue;
+
+		// Compute the factor to check if the intersection point is inside the triangle
+		float f = 1.0 / a;
+		glm::vec3 s = ray.getOrig() - tri.v0;
+		float u = f * glm::dot(s, h);
+
+		if (u < 0.0 || u > 1.0)
+			continue; // The intersection point is outside the triangle
+
+		glm::vec3 q = glm::cross(s, edge1);
+		float v = f * glm::dot(ray.getDir(), q);
+
+		if (v < 0.0 || u + v > 1.0)
+			continue; // The intersection point is outside the triangle
+		#pragma endregion CheckIntersection
+
+		//We know that there is an intersection with the triangle
+		// So we can compute t to find out where the intersection point is on the line.
+		float t = f * glm::dot(edge2, q);
+
+		if (t > 1e-7) { // Ray intersection
+			if (t < hit.t) { // Check if this is the closest intersection so far
+				foundHit = true;
+				hit.t = t;
+				hit.position = ray.getOrig() + ray.getDir() * t;
+				hit.normal = normalize(glm::cross(edge1, edge2)); // Compute normal at the intersection point
+				hit.mtl = tri.mtl;
+			}
+		}
+	}
+
+	return foundHit;
+}
+
 
 //TODO: modify this. It only computes light rendering at a point. But we can hear places we cannot see. We need to return sound sources at all intersection points
 // Given a ray, returns the sound where the ray intersects a sphere.
@@ -431,8 +484,21 @@ std::vector<reflectInfo> RayTracer(Ray ray) {
 	HitInfo hit;
 	std::vector<reflectInfo> reflectedSources; // stores all sound source instances, the returned ones will play one bit of sound
 	int MAX_BOUNCES = 3;
+	bool hitFound = false;
 
-	if (IntersectRaySphere(hit, ray)) {
+	#pragma region CheckIntersection
+	// Check for sphere intersection
+	hitFound = IntersectRaySphere(hit, ray);
+
+	// Check for triangle intersection
+	HitInfo triangleHit;
+	if (IntersectRayTriangle(triangleHit, ray) && (!hitFound || triangleHit.t < hit.t)) {
+		hit = triangleHit;
+		hitFound = true;
+	}
+	#pragma endregion CheckIntersection
+
+	if (hitFound) {
 		glm::vec3 view = normalize(-ray.getDir());
 		reflectInfo newReflectedSound(hit);
 		reflectedSources.push_back(newReflectedSound);
@@ -443,18 +509,29 @@ std::vector<reflectInfo> RayTracer(Ray ray) {
 
 			Ray r;	// this is the new reflection ray
 			HitInfo h;	// reflection new hit info
+			bool reflectionHitFound = false;
 
 			// Initialize the reflection ray
 			r.setDir(normalize(ray.getDir()) - 2 * dot(normalize(ray.getDir()), hit.normal) * hit.normal);
 			r.setOrig(hit.position + r.getDir() * 0.0001f);
 
+			#pragma region CheckIntersection
+			// Check for sphere intersection
+			reflectionHitFound = IntersectRaySphere(h, r);
 
-			if (IntersectRaySphere(h, r)) {
+			// Check for triangle intersection
+			HitInfo triangleReflectionHit;
+			if (IntersectRayTriangle(triangleReflectionHit, r) && (!reflectionHitFound || triangleReflectionHit.t < h.t)) {
+				h = triangleReflectionHit;
+				reflectionHitFound = true;
+			}
+			#pragma endregion CheckIntersection
+
+			if (reflectionHitFound) {
 				// TODO: Hit found, so make a sound at the hit point (not implemented)
-				reflectInfo newReflectedSound(h, reflectedSources.back().totalAbsorbed); // TODO: this needs to be filled with sound source information as soon as you know it! (will be done when we start detecting for real sound sources)
+				reflectInfo newReflectedSound(h, reflectedSources.back().totalAbsorbed);
 				reflectedSources.push_back(newReflectedSound);
 
-				//TODO: This (sound absorption order) needs to be reversed if the rays are thrown from the camera! (camera is not the source)
 				ReverseAbsorptionOrder(reflectedSources);
 				if (h.mtl.isSource) return reflectedSources; // if the hit object is a sound source, stop tracing reflections
 

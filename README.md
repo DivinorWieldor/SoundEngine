@@ -12,8 +12,7 @@ TODO:
 	- movement affected
 - Raytraced audio
 	- Implement material transitivity (allow some rays to move past materials. Will suffer greater dampening if this happens!)
-	- Implement plane equation
-		- Implement polygons for complex objects
+	- Add double face support for triangles
 - integrate velocity (for doppler shift)
 - Merge SoundFile and SineW
 - Improve performance
